@@ -1,0 +1,53 @@
+# zVoxRealms C++ formatting — Google preset with project-specific tweaks.
+# See docs/cpp-style.md for the conventions this enforces and the deviations
+# from the upstream Google C++ Style Guide.
+
+BasedOnStyle: Google
+Language: Cpp
+Standard: c++23
+
+# Google default is 80; we relax to 100 to accommodate adapter `extern "C"`
+# function signatures with handle + length + out-pointer arguments.
+ColumnLimit: 100
+
+# Indentation
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ContinuationIndentWidth: 4
+
+# Headers ordering — adapter wrappers want vendor-lib headers grouped together,
+# distinct from generic third-party headers.
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^"adapter\.h"$'
+    Priority: 1
+  - Regex: '^<.*\.h>'
+    Priority: 2
+  - Regex: '^<[^/]+>'
+    Priority: 3
+  - Regex: '^"(Jolt|imgui|glslang|ktx|tracy|GameNetworkingSockets)/'
+    Priority: 4
+  - Regex: '^".*"'
+    Priority: 5
+SortIncludes: CaseSensitive
+
+# Pointer alignment — `int* p` rather than `int *p` (Google default).
+PointerAlignment: Left
+
+# `extern "C"` blocks don't get extra indent.
+NamespaceIndentation: None
+
+# Allow short blocks on one line for `extern "C"` no-op wrappers, but keep
+# function bodies on multiple lines.
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Braces — Google attached style.
+BreakBeforeBraces: Attach
+
+# Modern C++ idioms.
+Cpp11BracedListStyle: true
+FixNamespaceComments: true
+DerivePointerAlignment: false
