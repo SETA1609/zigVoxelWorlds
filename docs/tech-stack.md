@@ -43,28 +43,28 @@ If a Zig-native option exists and is roughly comparable, prefer Zig.
 
 ## Data Layer (Data-Driven Design)
 
-Three formats, each with a clear job. No YAML.
+Four hand-authored formats + binary at runtime. Each format earns its keep for a specific shape of content; no YAML.
 
-- **TOML** — all hand-authored game content. Skills, perks, spells, recipes, scenes, UI layouts, mod manifests, gameplay tuning.
-  Comments + ergonomics matter more than parse speed here, because these files are loaded once at startup or hot-reloaded by humans.
-  Spec: [toml.io](https://toml.io/en/).
-- **Binary** — everything machine-authored or runtime-loaded. Save states, replay logs, voxel chunk deltas, baked meshes, baked textures (KTX2), audio.
-  Use a custom packed format for chunk deltas; use **FlatBuffers** ([flatbuffers.dev](https://flatbuffers.dev/)) or **Cap'n Proto** ([capnproto.org](https://capnproto.org/)) for structured save data where zero-copy reads + schema evolution earn their cost.
+- **TOML** — tree / graph / config content: quests, scenes, dialog trees, mod manifests, behavior trees, `project.toml`, scene definitions, editability policies, UI layouts. Comments + nested structure + named keys. Spec: [toml.io](https://toml.io/en/).
+- **CSV** — tabular game data: items, weapons, armor, recipes, voxel atlas, spell effects, loot tables, NPC stat blocks. Spreadsheet-native (Excel / LibreOffice); bulk-edit + autofilter + formula-based generation are huge solo-dev productivity wins. Line-oriented git diffs. Established indie convention (Stardew Valley, RimWorld, FTL). See [`specs/content-authoring.md`](specs/content-authoring.md) for the rationale + § "Why CSV not SQLite".
+- **`.po`** (gettext) — translations. Industry standard for FOSS games + GNOME / KDE / Mozilla. Mature tooling: [Poedit](https://poedit.net/), [Weblate](https://weblate.org/), Crowdin, Transifex. Plurals + `msgctxt` + comments + fuzzy markers are first-class. See [`specs/localization.md`](specs/localization.md).
+- **Binary** — everything machine-authored or runtime-loaded: save states, replay logs, voxel chunk deltas, baked meshes, baked textures (KTX2), audio. Custom packed format for chunk deltas; **FlatBuffers** ([flatbuffers.dev](https://flatbuffers.dev/)) or **Cap'n Proto** ([capnproto.org](https://capnproto.org/)) for structured save data where zero-copy reads + schema evolution earn their cost.
 - **JSON** — only where an external standard or third-party tool requires it:
   - **glTF 2.0** model files (glTF *is* JSON + binary buffers — [khronos.org/gltf](https://www.khronos.org/gltf/))
   - **Asset import metadata** (per-asset `.import` sidecars; JSON Schema gives us free validation in editors — [json-schema.org](https://json-schema.org/))
-  - **Editor exchange / clipboard** (when copy-pasting nodes between editor instances or external tools)
   - **Build manifests / CI artifacts** where tooling expects JSON
 
-Rules of thumb:
+Rules of thumb — match format to content shape:
 
-- If a human writes it by hand → TOML.
-- If the engine writes and reads it at runtime → binary.
-- If it crosses a tool boundary or follows an external spec → JSON.
-- Never use JSON for things humans hand-edit in this repo (no comments hurts).
-- Never use TOML for hot-path runtime parsing (it's 10–30× slower than binary).
-- Hot-reload of TOML and JSON during dev is a hard requirement.
-- Dev-only `--dump-save` command emits TOML from binary saves for inspection.
+- **Tabular** (every row has the same columns) → CSV
+- **Tree / nested / heterogeneous** (recipes referencing items referencing materials) → TOML
+- **Translations** → `.po`
+- **Engine writes + reads at runtime** → binary
+- **External-standard interchange** → whatever the standard says (glTF = JSON, KTX2 = binary, etc.)
+- Hot-reload of CSV + TOML + `.po` during dev is a hard requirement
+- Dev-only `--dump-save` command emits TOML from binary saves for inspection
+
+**SQLite is intentionally not used** — neither as runtime nor as authoring source-of-truth. Editor-time use deferred to v1.x if content volume forces it; CSV/TOML stay canonical. See [`specs/content-authoring.md`](specs/content-authoring.md) § "Why CSV not SQLite".
 
 ## Asset Pipeline (Godot/Unreal-style)
 

@@ -404,6 +404,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 36. **⏰ before Phase 10 OTel rollout** **Telemetry consent UX** — opt-in vs opt-out (GDPR)
 37. **⏰ before Phase 15** **Crash reporting** — local-only vs opt-in upload vs player-controlled (see §2.2.E)
 38. **⏰ before Phase 14** **Camera system spec** — see §2.2.K
+39. **⏰ before Phase 14** **Steam Workshop + DLC integration hooks** — Workshop = `ISteamUGC` (subscribe/download/upload); DLC = `ISteamApps::BIsDlcInstalled` per DLC AppID. Cross-platform fallback for non-Steam builds. DLC distribution (bundled-and-gated vs download-on-purchase). Mod-DLC dependency semantics. See [`engine-vs-game.md` § 3b TODO](engine-vs-game.md) and [`specs/mod-manager.md`](specs/mod-manager.md) § Workshop+DLC
 
 ---
 
