@@ -30,7 +30,7 @@ The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHI
 │   ├── licensing.md
 │   ├── cpp-style.md
 │   ├── guard.md
-│   ├── planning-gaps.md
+│   ├── gaps.md
 │   ├── mvp.md
 │   └── specs/                   # Per-subsystem detailed specs
 │       ├── voxel.md

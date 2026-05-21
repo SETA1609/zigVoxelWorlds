@@ -56,7 +56,7 @@ If yes → continue. If no → redesign in week 3, not month 30.
 
 ## Open dependencies before MVP starts
 
-From [`planning-gaps.md`](planning-gaps.md):
+From [`gaps.md`](gaps.md):
 
 - `project.toml` schema (#1) — even a skeleton
 - `mod.toml` schema (#2) — even a skeleton

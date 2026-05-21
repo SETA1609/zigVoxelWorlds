@@ -1,6 +1,6 @@
 # Scene & Instancing Spec
 
-> The persistent world + dungeon/tower/house instances, wired via `orchestrator.toml`. Roadmap: [`ROADMAP.md` § Phase 9](../ROADMAP.md). Open questions on scene format: [`planning-gaps.md` #3, #4](../planning-gaps.md).
+> The persistent world + dungeon/tower/house instances, wired via `orchestrator.toml`. Roadmap: [`ROADMAP.md` § Phase 9](../ROADMAP.md). Open questions on scene format: [`gaps.md` § 3](../gaps.md).
 
 ## Scope
 
@@ -11,7 +11,7 @@
 
 ## Scene contents
 
-Per [`planning-gaps.md` #3](../planning-gaps.md), each `scene.toml` declares:
+Per [`gaps.md` § 3](../gaps.md), each `scene.toml` declares:
 
 - Entity spawn list (positions + component overrides)
 - Region AABBs with [edit policies](../ARCHITECTURE.md#cross-cutting-concerns)

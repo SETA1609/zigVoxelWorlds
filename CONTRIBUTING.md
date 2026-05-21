@@ -96,7 +96,7 @@ Body: optional. Explains WHY. Wrap at 80 cols.
 
 In priority order, even pre-public:
 
-1. **Doc review** — find inconsistencies between docs (numerous; see [`docs/planning-gaps.md`](docs/planning-gaps.md))
+1. **Doc review** — find inconsistencies between docs (numerous; see [`docs/gaps.md`](docs/gaps.md))
 2. **Reference engine source pointers** — if a path in [`docs/engine-references.md`](docs/engine-references.md) is stale, file an issue
 3. **Typos, broken links, formatting** — direct PR welcome
 

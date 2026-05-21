@@ -22,7 +22,7 @@
 
 ## `project.toml` (per project)
 
-The project manifest. Schema not yet specified — see [`planning-gaps.md` #1](../planning-gaps.md) and the example block in [`engine-vs-game.md` § 9](../engine-vs-game.md). Minimum fields:
+The project manifest. Schema not yet specified — see [`gaps.md` § 3](../gaps.md) and the example block in [`engine-vs-game.md` § 9](../engine-vs-game.md). Minimum fields:
 
 - `[project]` — name, version, engine_compat
 - `[modules]` — enable/disable table

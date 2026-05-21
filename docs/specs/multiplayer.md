@@ -1,6 +1,6 @@
 # Multiplayer Spec
 
-> Host-authoritative 4-player co-op default, optional 40–50 dedicated servers. Roadmap: [`ROADMAP.md` § Phase 10](../ROADMAP.md). Open transport + authority questions: [`planning-gaps.md` #26–29](../planning-gaps.md). Save-model interaction: [`ARCHITECTURE.md` cross-cutting](../ARCHITECTURE.md).
+> Host-authoritative 4-player co-op default, optional 40–50 dedicated servers. Roadmap: [`ROADMAP.md` § Phase 10](../ROADMAP.md). Open transport + authority questions: [`gaps.md` § 3](../gaps.md). Save-model interaction: [`ARCHITECTURE.md` cross-cutting](../ARCHITECTURE.md).
 
 ## Scope
 

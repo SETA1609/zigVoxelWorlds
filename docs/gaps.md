@@ -1,0 +1,463 @@
+# zVoxRealms — Gap Analysis
+
+> The single source of truth for what zVoxRealms is missing relative to (a) the canonical game-engine architecture, (b) the four target games in [`vision.md`](vision.md), and (c) decisions we haven't made yet. Replaces the older `v1-gaps.md` and `planning-gaps.md`.
+>
+> **To resolve a gap:** see [`gap-references.md`](gap-references.md) — for each missing system, the specific reference-engine files (Hazel / Luanti / Godot / Unreal) to study and adapt from. Per [`engine-references.md` § Legal](engine-references.md): read, understand, reimplement in Zig — never copy verbatim.
+
+## How to read this doc
+
+Three sections:
+
+- **§1. Canonical engine cores — alignment** — what industry-standard cores exist (per Jason Gregory, *Game Engine Architecture*) and how zVoxRealms stacks up against each
+- **§2. Missing systems & features** — what we lack to ship the four target games (tier-ranked: mission-blocking → usability-blocking → post-1.0 polish)
+- **§3. Open decisions** — specific data-schema / architecture / process choices that need to be made before or during named phases
+
+**Status legend (§1):** ✅ aligned · ⚠ partial · ❌ missing
+**Priority tags (§3):** 🔥 urgent (unblocks Phase 0) · ⏰ before-phase (named in entry) · 📅 later (Phase 12+ / post-v1.0)
+**Tier scale (§2):** Tier 1 = no v1.0 without it · Tier 2 = works but painful · Tier 3 = polish after v1.0
+
+Cross-refs: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`ROADMAP.md`](ROADMAP.md), [`engine-references.md`](engine-references.md).
+
+---
+
+## §1. Canonical engine cores — alignment
+
+The industry-standard engine layering, from Jason Gregory's *Game Engine Architecture* (3rd ed., <https://www.gameenginebook.com/>) Chapter 1. Unreal, id Tech, Naughty Dog's ICE, Bevy, Godot, etc. all converge on roughly this set. Mapped against the current zVoxRealms doc set.
+
+| # | Core | Sub-system | Status | Where in docs |
+| --- | --- | --- | --- | --- |
+| 1 | Platform abstraction | window, input, file I/O, threading, time | ✅ | `src/platform/` in [`project-structure.md`](project-structure.md); Phase 1 |
+| 2 | Core systems | allocators, math, containers, asserts, logging, profiling, RNG, handle table | ✅ | [`ARCHITECTURE.md`](ARCHITECTURE.md) high-level layers; Phase 2 stubs (`profile.zig`, `log_sink.zig`, `metrics.zig`); handle table in [`specs/ecs.md`](specs/ecs.md) |
+| 3 | Resource manager | asset loading, caching, lifetime, async I/O, hot-reload, refcounting | ✅ | [`tech-stack.md`](tech-stack.md) § Asset Pipeline + Phase 4; GUID-based assetdb |
+| 4 | Renderer — RHI | graphics API wrapper | ✅ | `RenderServer` + Vulkan backend; `ARCHITECTURE.md` § Server Pattern |
+| 4 | Renderer — scene + culling | scene graph, frustum / occlusion | ⚠ | [`specs/scene.md`](specs/scene.md) covers instancing; **frustum/occlusion culling undesigned** |
+| 4 | Renderer — **materials** | albedo/normal/rough/metallic descriptors per surface | ❌ | nowhere |
+| 4 | Renderer — **shader management** | runtime registry, `VkPipeline` cache, descriptor-set layouts | ⚠ | glslang adapter compiles GLSL→SPIR-V (Phase 4); **runtime shader management undesigned** |
+| 4 | Renderer — **particles / VFX** | GPU emitters, particle update + render | ❌ | listed below in §2.1.B |
+| 4 | Renderer — **post-processing** | tonemap, bloom, FXAA, vignette | ❌ | nowhere |
+| 4 | Renderer — GUI rendering | in-game UI rasterization | ⚠ | ImGui for editor; in-game UI design listed in §2.1.D |
+| 4 | Renderer — **lighting model** | directional sun, point/spot lights, ambient probes | ⚠ | voxel lighting in [`specs/voxel.md`](specs/voxel.md); **scene-level lighting undesigned** |
+| 4 | Renderer — **decals** | gunshot marks, blood, footprints | ❌ | nowhere |
+| 5 | **Animation** | skeletal, morph targets, state machines, blending, IK | ❌ | listed below in §2.1.A |
+| 6 | **Audio** | playback, mixing, 3D positional, bus routing, streaming, DSP | ⚠ | miniaudio library chosen in [`tech-stack.md`](tech-stack.md); **architecture undesigned** — see §2.1.C |
+| 7 | Physics + collision | broadphase, narrowphase, rigid body, character controller | ✅ | [`specs/physics.md`](specs/physics.md) + Phase 5 |
+| 8 | Gameplay — ECS | object model, component storage | ✅ | [`specs/ecs.md`](specs/ecs.md) + Phase 7 |
+| 8 | Gameplay — world | scene/instancing | ✅ | [`specs/scene.md`](specs/scene.md) |
+| 8 | Gameplay — scripting | game logic compile + load | ✅ | [`engine-vs-game.md`](engine-vs-game.md) § 5 |
+| 8 | Gameplay — **events / messaging** | pub/sub, signal/slot, observer | ❌ | nowhere — see §2.1.E |
+| 9 | **AI** | pathfinding, behavior systems (BT/GOAP/utility), perception | ⚠ | flagged in §3 #19; no spec doc |
+| 10 | Networking | replication, prediction, server authority | ✅ | [`specs/multiplayer.md`](specs/multiplayer.md) + Phase 10 |
+| 11 | VFX broader — **weather** | rain/snow/wind systems | ❌ | scenes can declare; **no engine to execute** — see §2.1.F |
+| 11 | VFX broader — **time-of-day** | day/night cycle, sun rotation | ⚠ | scenes can override; **no cycle subsystem** |
+| 12 | Front-end — UI | HUD, menus, dialog | ⚠ | format chosen (TOML + SCSS); engine in §2.1.D |
+| 12 | Front-end — **transitions** | fade-to-black, scene transitions | ❌ | nowhere |
+| 12 | Front-end — **FMV / cutscenes** | video playback, scripted scenes | ❌ | scope-undecided |
+| 13 | Tools / pipeline | asset conditioning, editor, debug, profiler | ✅ | [`specs/editor.md`](specs/editor.md), [`specs/project-manager.md`](specs/project-manager.md), importers, export pipeline |
+| 14 | Save/load | save format, slots, autosave UI | ✅ partial | save model in [`ARCHITECTURE.md`](ARCHITECTURE.md) + Phase 13; **save-slot UX in §2.2.C** |
+| 14 | Replay | record + playback | ✅ | ROADMAP Phase 15 milestone |
+| 14 | Telemetry | metrics, traces, structured logs | ✅ | OTel three-tier observability ([`tech-stack.md`](tech-stack.md) § Observability) |
+| 14 | **Accessibility** | colorblind, screen reader, key remap, font scaling | ❌ | nowhere — see §2.2.J |
+| 14 | **Camera system** | first-person / top-down / third-person math | ⚠ | flagged §3 #14; no spec |
+
+### Summary
+
+**Aligned:** structural layers (1, 2, 3, 7, 8 partial, 10, 13, 14 partial). The plumbing is well-documented.
+
+**Under-specified:** renderer beyond the RHI (4 — materials, shaders, lighting, post-process, decals), all of presentation (5, 6, 11, 12), event bus (8 partial), AI (9), accessibility, camera.
+
+**Critical observation:** the under-specified areas are exactly what the four target games need most. Daggerfall + Stardew + Atelier + rogue-likes are all **presentation-heavy + content-heavy** game shapes. Presentation is on the critical path, not optional polish.
+
+---
+
+## §2. Missing systems & features
+
+Tier 1 = mission-blocking. Tier 2 = usability-blocking. Tier 3 = post-1.0 polish.
+
+### Tier 1: mission-blocking — must land before v1.0
+
+#### §2.1.A — Animation system
+
+**Biggest single gap.** Daggerfall has thousands of animated NPCs. Stardew villagers walk schedules. Atelier characters animate during synthesis. Rogue-like monsters attack.
+
+Missing:
+
+- Skeletal animation (bones + skin weights)
+- Animation blending (idle → walk → run)
+- Animation state machines (Mecanim-style or simpler)
+- Inverse kinematics (foot placement on uneven voxel terrain)
+- Voxel-specific character animation — most engines optimize for triangle-mesh skeletons; voxel characters are a different problem worth solving once
+
+Reference: Godot's `AnimationTree`, Unreal's Anim Graph.
+
+#### §2.1.B — Particle / VFX system
+
+Magic effects, footstep dust, fire/smoke, rain, snow, blood, sparkles on Atelier synthesis. The magic system in [`specs/gameplay.md`](specs/gameplay.md) implicitly requires particles on screen but no system creates them.
+
+Missing:
+
+- GPU-side particle simulation
+- Emitter authoring (TOML-driven? curve-based?)
+- Particle-to-voxel-world interaction (sparks lighting things, snow piling on chunks)
+- Performance budget — particles are easy to over-spend on iGPU
+
+#### §2.1.C — Audio architecture beyond library choice
+
+[`tech-stack.md`](tech-stack.md) picks miniaudio. That's 10% of audio design. Missing:
+
+- 3D positional / spatial audio
+- Audio bus mixing (SFX / music / dialog / UI / ambient — per-bus volume)
+- Music streaming + crossfade (combat ↔ explore transitions)
+- Reverb zones (cave vs forest vs interior)
+- Occlusion (sound through walls quieter)
+- Voice / dialog system (subtitle sync, optional TTS fallback)
+
+#### §2.1.D — UI layout engine + widget set
+
+[`tech-stack.md`](tech-stack.md) says "TOML layout + SCSS styling." That's the *format*, not the *engine*. Missing:
+
+- Layout primitives (flexbox? CSS Grid? hand-rolled boxes?)
+- Widget set (label / button / panel / list / scrollview / image / slider / text input / dropdown / tabs / modal)
+- Animation / transitions for UI
+- Controller-friendly focus navigation
+- DPI scaling
+- Font subsystem (FreeType? stb_truetype? CJK fallback chains?)
+
+ImGui handles editor UI. In-game UI (menus / HUDs / inventory / dialog) needs its own engine.
+
+#### §2.1.E — Event / messaging bus
+
+Gameplay foundation needs pub-sub: "player crafted X" → quest trigger + achievement trigger + sound effect + particle spawn. Without this, every system polls or hard-couples to every other.
+
+Missing:
+
+- Event registration / fire / observe API
+- Type-safe payload (Zig comptime advantage)
+- Listener priority + ordering
+- Mod-extensible event types
+
+Critical infrastructure for Phase 8 (gameplay modules). Specify before Phase 7.
+
+#### §2.1.F — Scene lighting, decals, weather, time-of-day
+
+Currently voxel lighting is local (per-chunk propagation) per [`specs/voxel.md`](specs/voxel.md). Scene-level lighting + decals + weather + time-of-day are absent. Missing:
+
+- Directional sun light (with shadow casting)
+- Point / spot dynamic lights (torches, fire, spells)
+- Ambient probes / SH for indoor lighting
+- Day-night cycle subsystem (sun rotation tied to game time)
+- Weather state machine (clear → rain → storm transitions)
+- Particle-driven weather (rain, snow, dust)
+- Decal projection on voxel surfaces (gunshot marks, blood, footprints)
+
+#### §2.1.G — Materials + shader management
+
+Currently the renderer is a `RenderServer` interface with a Vulkan backend. Mesh entities need material descriptors. Runtime needs shader pipeline-state caching.
+
+Missing:
+
+- Material descriptor (albedo / normal / roughness / metallic / emissive)
+- Material editor (in the engine editor — Phase 12)
+- Shader registry (compile-time + runtime lookup)
+- `VkPipeline` object cache
+- Descriptor-set layout management
+- Push-constant range management
+- Draw-call sorting (front-to-back opaque, back-to-front transparent)
+
+#### §2.1.H — Add Phase 7.5: Presentation Layer
+
+Items §2.1.A through §2.1.G usually ship together — they share a tick budget, a streaming model, and are driven by gameplay events. Suggest a **new phase** between Phase 7 (ECS) and Phase 8 (Gameplay):
+
+> **Phase 7.5 — Presentation Layer**
+> Materials + shader registry + scene lighting + decals + post-processing. Animation state machines + skeletal/voxel animation. GPU particle / VFX system. 3D positional audio with bus mixing + reverb zones + music streaming. Weather + time-of-day. In-game UI engine (layout + widgets + controller nav). Event/messaging bus. Game logic emits events; presentation layer renders them.
+
+Probably 3–4 months solo. Currently the most under-scoped area of the entire project.
+
+#### §2.1.I — Threading model
+
+Flagged in §3 #12. **Blocks Phase 2** — you can't finalize `RenderServer` / `VoxelServer` / `PhysicsServer` shapes without knowing whether each runs on its own thread + how they communicate.
+
+Needs spec'd before Phase 2 starts:
+
+- Which servers are threaded
+- What queue / channel type carries commands between threads
+- How the main loop drains them
+- Worst-case latency budget per server
+
+Reference: Godot's `CommandQueueMT` ([`engine-references.md`](engine-references.md) → Godot § Server pattern). Create `docs/specs/threading.md`.
+
+#### §2.1.J — Content authoring beyond importers
+
+Phase 4 handles **import**. Source content has no plan:
+
+- A Daggerfall-clone needs ~7000 NPC variations. Procedural? Hand-authored?
+- The voxel atlas needs hundreds of entries for variety. Who designs it?
+- Stardew has ~100 crops + tools + recipes
+- Atelier needs an item / recipe database in the hundreds
+
+If the engine doesn't provide **content-authoring tools** (procedural NPC generator, voxel-atlas editor, recipe-bulk-import flow), then "ship a Daggerfall-clone in 3 years" is unrealistic for a solo dev. Either add tools or scope down the v1.0 target game.
+
+### Tier 2: usability-blocking — works but painful without these
+
+#### §2.2.A — CI / cross-compile / release automation
+
+`build.zig` exists; no CI. Need:
+
+- GitHub Actions for lint (`zig fmt` + `clang-format` check), `zig build test`, build matrix (Linux + Windows now, Android later)
+- Per-PR pipeline runs before merge
+- Tagged releases auto-build + upload artifacts to GitHub Releases
+- Steam upload automation
+- Versioning policy (pre-1.0 semver — `0.x.y` where x = phase number?)
+- Update channel mechanism (dev / beta / stable)
+
+Set up in Phase 0.5 or when first runnable code lands.
+
+#### §2.2.B — Localization (i18n / l10n)
+
+Mentioned in §3 #15 but no roadmap phase. Even single-language v1.0 should plan:
+
+- String table format (TOML — id → translation)
+- Code idiom: `t("ui.menu.start")` style
+- Format-string substitution (number, gender, plurals)
+- Font fallback for non-Latin glyphs (CJK is the hard case)
+- Hot-reload of translations in editor
+
+Retrofitting localization is painful. Bake the API in from Phase 2 even if shipping English-only at v1.0.
+
+#### §2.2.C — Save UX beyond the binary format
+
+[Phase 13](ROADMAP.md) handles save *format*. UX is missing:
+
+- Save / load menu UI (multiple slots, screenshots, playtime)
+- Autosave cadence + visual indicator
+- Save migration on engine update (read old → write new)
+- Steam Cloud sync + conflict resolution UI
+- Save corruption detection (checksums, recovery dialog)
+
+#### §2.2.D — Mod manager UX
+
+Phase 14 has discovery + loading. User-facing UX is missing:
+
+- In-game mod browser (list installed, enable/disable per save)
+- Steam Workshop browser inside the engine
+- Mod dependency-graph display
+- Conflict warnings ("mod A and mod B both replace voxel #42")
+- Mod load order UI
+
+Without this, modding is "edit a config file by hand" — violates the "modded as easily as Minecraft" vision.
+
+#### §2.2.E — Diagnostics + crash dump pipeline
+
+[Phase 12](ROADMAP.md) has libghostty for editor playtest logs. Shipped games need:
+
+- Crash dump generation on segfault
+- Symbol upload from CI for symbolication
+- Player-facing "your game crashed, upload report?" dialog
+- Save-game recovery on crash
+
+#### §2.2.F — Engine docs for game developers using zVoxRealms
+
+Current `docs/` are internal. A solo dev who wants to *use* zVoxRealms needs different docs:
+
+- "How to make your first project" walkthrough
+- API reference (auto-generated from Zig comptime? hand-curated?)
+- Tutorial: "build a 1-room dungeon crawler in 30 minutes"
+- Module catalog (what does each `modules/<name>/` give you?)
+- Cookbook ("how do I add a custom voxel type", "how do I script a quest")
+
+Without this, the 3-year-horizon "small community of developers" in [`vision.md`](vision.md) doesn't happen. Create `docs/user-guide/` as a placeholder.
+
+#### §2.2.G — Test strategy beyond unit tests
+
+Flagged in §3 #33 but undecided. Need:
+
+- Integration tests (full scenario: spawn world → make edit → save → reload → verify state)
+- Visual regression (golden-image diffs)
+- Save-load round-trip test for every save-section version
+- Network simulation (lag/loss/jitter, verify reconciliation)
+- Mod-compatibility suite (test mods that should never break)
+- Performance regression suite (per-PR FPS budget)
+
+#### §2.2.H — Memory budget enforcement
+
+[`mission.md`](mission.md) says < 3.5 GB RAM. No mechanism to enforce:
+
+- Per-subsystem allocator instrumentation
+- Per-frame allocation tracking
+- GPU memory accounting (VMA exposes; needs surfacing)
+- Hard budgets that fail builds if exceeded
+
+#### §2.2.I — Steam Cloud + achievements schema design
+
+Steamworks adapter is planned. Need:
+
+- Achievement schema (TOML-driven? defined in `project.toml`?)
+- Trigger surfaces (gameplay event → achievement check)
+- Non-Steam fallback (GOG Galaxy, EOS, disabled)
+- Cloud save quota awareness (Steam Cloud has per-game quotas)
+
+#### §2.2.J — Accessibility baseline
+
+Currently absent in docs. v1.0-blocking minimum:
+
+- Colorblind modes / colorblind-safe defaults
+- Key + controller remapping (full)
+- Font scaling
+- Subtitle controls
+- Motion-sickness reduction (FoV slider, head-bob toggle)
+- High-contrast UI mode
+
+A meaningful accessibility baseline is also a Steam-page selling point, not just a moral one.
+
+#### §2.2.K — Camera system
+
+Flagged in §3 #14. Should be a real spec doc, not just a planning item:
+
+- Daggerfall = first-person, FoV ~75°
+- Stardew = top-down ortho or shallow 3D
+- Atelier = third-person orbit
+- Rogue-like = top-down or chase
+
+These are different camera math problems. The engine should support all three through a camera-mode plug, or pick one for v1.0 and explicitly defer others to v1.1.
+
+### Tier 3: post-1.0 polish
+
+Confirmed: these don't block v1.0. Listed to keep them tracked.
+
+- Visual scripting (deferred in [`mission.md`](mission.md))
+- Console ports (deferred in [`vision.md`](vision.md))
+- WebGPU fallback (deferred in ROADMAP)
+- Voice chat / Steam P2P advanced features
+- Replay export to MP4 / video capture
+- In-engine asset-store browser
+- LSP integration inside bundled Neovim (jump-to-definition for engine APIs)
+- Multiplayer debug tools (network inspector, lag simulation)
+- macOS / iOS ports
+- Multi-language scripting beyond Zig + C++
+- AI-assisted content generation (procedural NPCs via LLM)
+- Screenshot mode + free camera (for trailers)
+- FMV / cutscene playback
+- Frame-rate-locked rendering for video capture
+
+---
+
+## §3. Open decisions
+
+38 items that aren't yet documented anywhere. Numbering is for citation, not priority. Use the tags for sequencing.
+
+### §3.1 — Data schemas (the most urgent gap)
+
+You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`, and `assetdb.toml` throughout the docs without specifying their fields. Without these, Phase 0 cannot finish.
+
+1. **🔥 `project.toml` schema** — exact fields per section. `[project]` name/version/engine_compat, `[modules]` enable-disable table, `[scripts]` language+entry, `[export.<target>]` per-platform options
+2. **🔥 `mod.toml` schema** — manifest fields: name, version, engine ABI compat range, dependencies, load order, plugin path
+3. **⏰ before Phase 9** **Scene definition format** — entity spawn list, region AABBs, edit-policy reference, lighting, weather, time-of-day overrides
+4. **⏰ before Phase 9** **`orchestrator.toml`** — how it links scenes to world coordinates and triggers
+5. **🔥 `assetdb.toml`** — exact GUID format (UUIDv7 recommended), content-hash algorithm (Blake3 vs SHA-256), per-entry fields
+6. **⏰ before Phase 13** **Save file binary format** — exact layout, magic header, version per section, endianness, alignment
+
+### §3.2 — Architecture — type/layout decisions
+
+7. **🔥 `Handle` layout** — u64 `(generation, index)` vs `(server_id, generation, index)`
+8. **🔥 Coordinate system** — Y-up vs Z-up; left- vs right-handed; units; block size
+9. **🔥 Voxel data layout** — bits per voxel (8/16/32); palette per chunk vs global; voxel-ID semantics
+10. **🔥 Chunk size** — 16³ vs 32³ vs 64³ (memory, meshing batch, network packet size)
+11. **⏰ before Phase 6** **Origin rebasing strategy** — float64 vs rebase trigger
+12. **🔥 Threading model** — see §2.1.I
+13. **🔥 C ABI surface design** — concrete `extern "C"` functions for mods/scripts; versioned
+
+### §3.3 — Gameplay shapes — what your four games actually look like at the engine level
+
+14. **⏰ before Phase 1** (input layer) **Input mapping** — keyboard/mouse/gamepad, rebinding, action-based
+15. **⏰ before Phase 12** **UI scaling** — DPI awareness, controller-friendly nav, font subsystem
+16. **⏰ before Phase 13** **Save slot UX** — see §2.2.C
+17. **⏰ before Phase 8** **Quest system data model** — flags, state machines, branching dialog, scripted
+18. **⏰ before Phase 8** **NPC AI architecture** — utility AI, BT, GOAP, hand-coded states; schedules vs roaming
+19. **⏰ before Phase 8** **Magic system data model** — effect composition, mana/cost, cooldowns, target acquisition
+20. **⏰ before Phase 8** **Crafting math** — quality formula, time-cost, success curves, station types
+21. **⏰ before Phase 8** **Inventory model** — slots, weight, stack rules, container hierarchy, equipped vs carried
+
+### §3.4 — Modding & scripting
+
+22. **⏰ before Phase 14** **Modding security model** — disk/network access, sandbox, threat model
+23. **🔥 ABI versioning policy** — semver, compatibility window across engine releases
+24. **⏰ before Phase 14** **Script package contract** — entry-function signature, lifecycle hooks
+
+### §3.5 — Multiplayer
+
+25. **⏰ before Phase 10** **Network transport choice** — ENet vs GameNetworkingSockets vs custom UDP
+26. **⏰ before Phase 10** **Edit authority model** — host-decides vs client-prediction-with-rollback
+27. **⏰ before Phase 10** **Server discovery** — LAN broadcast vs lobby service vs Steam Networking
+28. **⏰ before Phase 10** **NAT traversal** — direct-only vs hole-punching service
+
+### §3.6 — Process — how you actually work
+
+29. **⏰ before commit #2** **Branching strategy** — trunk-based with flags vs gitflow
+30. **📅 when it goes public** **Issue tracker** — GitHub Issues + labels? Linear?
+31. **📅 post Phase 11** **Release cadence** — weekly dev / monthly stable / yearly major
+32. **🔥 Test strategy** — see §2.2.G
+33. **⏰ before Phase 5** **Performance regression detection** — benchmark suite + per-PR perf budget + CI hardware specs
+
+### §3.7 — Business / publishing
+
+34. **📅 before any Steam page** **Trademark filing** — defensive "zVoxRealms" trademark (USPTO + EUIPO)
+35. **📅 before Phase 15** **Steam page / wishlist plan**
+36. **⏰ before Phase 10 OTel rollout** **Telemetry consent UX** — opt-in vs opt-out (GDPR)
+37. **⏰ before Phase 15** **Crash reporting** — local-only vs opt-in upload vs player-controlled (see §2.2.E)
+38. **⏰ before Phase 14** **Camera system spec** — see §2.2.K
+
+---
+
+## Suggested resolution order
+
+### Week 1–2 — write data-schema docs
+
+1. `project.toml` (#1) — most-referenced thing
+2. `mod.toml` (#2)
+3. `assetdb.toml` (#5)
+4. Save format header + section versioning (#6, partial — just enough for chunk deltas)
+
+### Week 2–3 — architecture micro-decisions
+
+5. `Handle` layout (#7)
+6. Coordinate system (#8)
+7. Voxel data layout (#9)
+8. Chunk size (#10)
+9. Threading model (#12, §2.1.I) — create `docs/specs/threading.md`
+10. C ABI surface skeleton (#13)
+11. Test strategy (#32)
+12. Branching strategy (#29)
+13. ABI versioning policy (#23)
+
+### Pre-coding for each phase
+
+14. Camera model (before Phase 1, §2.2.K)
+15. Input mapping (before Phase 1, #14)
+16. Origin rebasing strategy (before Phase 6, #11)
+17. Quest / AI / magic / crafting / inventory data models (before Phase 8, #17–21)
+18. Network transport + authority (before Phase 10, #25–28)
+19. Performance regression CI (before Phase 5, #33)
+20. Save UX + slot management (before Phase 13, #16)
+21. Crash reporting + telemetry consent (before Phase 13–14, #36, #37)
+
+### Eventual
+
+22. Trademark filing (before public Steam page)
+23. Steam page assets (before Phase 15)
+24. Release cadence + automation (before Phase 11)
+
+### Concurrent — add Phase 7.5: Presentation Layer
+
+(§2.1.H) — start designing as Phase 2 lands so animation/VFX/audio/UI specs exist before Phase 8 game logic depends on them.
+
+---
+
+## How this doc gets updated
+
+When an item is decided or a system lands:
+
+1. The decision/system goes into the relevant doc (`ARCHITECTURE.md`, `tech-stack.md`, `engine-vs-game.md`, or a new spec under `docs/specs/`)
+2. Cross out the corresponding item here, or replace with a one-line "→ landed in Phase X / commit Y" / "→ decided in [link]"
+3. When a tier/category empties, collapse the section
+4. When v1.0 ships, this doc closes; rename to `pre-v1-gaps.md` for historical context
+
+This file should shrink over time. When it's empty, you're done.

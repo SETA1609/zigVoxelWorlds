@@ -1,6 +1,6 @@
 # zVoxRealms Roadmap
 
-> A roadmap, not a feature catalog. Per-phase scope lives in [`specs/`](specs/). High-level architecture lives in [`ARCHITECTURE.md`](ARCHITECTURE.md). Scope authority: [`vision.md`](vision.md), [`mission.md`](mission.md). Code-level references: [`engine-references.md`](engine-references.md). Open planning items: [`planning-gaps.md`](planning-gaps.md).
+> A roadmap, not a feature catalog. Per-phase scope lives in [`specs/`](specs/). High-level architecture lives in [`ARCHITECTURE.md`](ARCHITECTURE.md). Scope authority: [`vision.md`](vision.md), [`mission.md`](mission.md). Code-level references: [`engine-references.md`](engine-references.md). Open planning items: [`gaps.md`](gaps.md). **Missing systems / v1 gap analysis:** [`gaps.md`](gaps.md).
 
 The roadmap is **vertical-slice-driven**: each phase ends with something runnable. The v1 target is a small Daggerfall-style co-op slice — one town, one dungeon, working skills/magic/crafting, 4-player co-op, mod loader live, packaged via the per-project export pipeline.
 
@@ -11,10 +11,10 @@ The roadmap is **vertical-slice-driven**: each phase ends with something runnabl
 Planning, layout, decisions — no engine code beyond hello-world.
 
 - [x] Zig + C + C++ hybrid build system (`src/main.zig` + `src/c/` + `src/cpp/` build via `build.zig`)
-- [x] Planning documents in `docs/` (vision, mission, ARCHITECTURE, tech-stack, project-structure, engine-vs-game, engine-references, external-libs, licensing, cpp-style, guard, planning-gaps, ROADMAP, mvp, plus `specs/*.md`)
+- [x] Planning documents in `docs/` (vision, mission, ARCHITECTURE, tech-stack, project-structure, engine-vs-game, engine-references, external-libs, licensing, cpp-style, guard, gaps, ROADMAP, mvp, plus `specs/*.md`)
 - [ ] On-disk project layout matches [`project-structure.md`](project-structure.md)
 - [ ] Build artifact renamed from `demo` to `zvoxrealms` in `build.zig`
-- [ ] Data-schema docs landed (per [`planning-gaps.md` §1](planning-gaps.md))
+- [ ] Data-schema docs landed (per [`gaps.md` § 3](gaps.md))
 
 See [`mvp.md`](mvp.md) for the MVP definition (= Phase 1 + Phase 2).
 
@@ -72,7 +72,7 @@ Spec: [`specs/physics.md`](specs/physics.md). Adapter: [`external-libs.md` § 3]
 
 Chunk streaming with hybrid loading, 3+ LOD tiers, origin rebasing, background asset streaming.
 
-Open decisions: chunk size, origin rebasing strategy ([`planning-gaps.md` #10, #11](planning-gaps.md)).
+Open decisions: chunk size, origin rebasing strategy ([`gaps.md` § 3](gaps.md)).
 
 **Milestone:** 10 km² seamless world, 8-chunk view distance, target FPS on low-end hardware.
 
@@ -177,6 +177,6 @@ Integration milestone: one town, one dungeon, the full skill/magic/crafting loop
 
 ---
 
-**Current priority:** finish Phase 0 planning (data-schema docs in [`planning-gaps.md` §1](planning-gaps.md)), then begin Phase 1.
+**Current priority:** finish Phase 0 planning (data-schema docs in [`gaps.md` § 3](gaps.md)), then begin Phase 1.
 
-See: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`engine-vs-game.md`](engine-vs-game.md), [`external-libs.md`](external-libs.md), [`engine-references.md`](engine-references.md), [`planning-gaps.md`](planning-gaps.md), [`mvp.md`](mvp.md), [`specs/`](specs/).
+See: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`engine-vs-game.md`](engine-vs-game.md), [`external-libs.md`](external-libs.md), [`engine-references.md`](engine-references.md), [`gaps.md`](gaps.md), [`mvp.md`](mvp.md), [`specs/`](specs/).

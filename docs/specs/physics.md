@@ -1,6 +1,6 @@
 # Physics Spec
 
-> What `modules/physics_jolt/` provides. Roadmap: [`ROADMAP.md` § Phase 5](../ROADMAP.md). Adapter notes: [`external-libs.md` §3](../external-libs.md). Open questions: [`planning-gaps.md`](../planning-gaps.md).
+> What `modules/physics_jolt/` provides. Roadmap: [`ROADMAP.md` § Phase 5](../ROADMAP.md). Adapter notes: [`external-libs.md` §3](../external-libs.md). Open questions: [`gaps.md`](../gaps.md).
 
 ## Scope
 

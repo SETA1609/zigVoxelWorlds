@@ -31,8 +31,7 @@ Until v1.0, expect breaking changes between **every** minor version. The engine 
   - `licensing.md` — strategy: Apache 2.0 dev + Steam stable; permissive deps only; adapter sub-repos MIT (Apache for codec-adjacent wrappers); trademark separate; no CLA
   - `cpp-style.md` — Google C++ Style Guide baseline with project deviations (exceptions inside / forbidden at C boundary; RTTI per wrapped lib; C++23)
   - `guard.md` — rules for AI collaboration in this learning project
-  - `planning-gaps.md` — 38 open decisions to resolve before / during coding
-  - `myGoals.md` — original scope notes (superseded by vision + mission)
+  - `gaps.md` — consolidated gap analysis: canonical engine-cores alignment + missing systems (tier-ranked) + 38 open decisions
   - `mvp.md` — MVP definition (Phase 1 + Phase 2)
 - Repo-root meta files: `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`
 - `.clang-format` at repo root + adapter sub-repo

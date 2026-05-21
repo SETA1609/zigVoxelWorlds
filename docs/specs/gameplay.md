@@ -1,6 +1,6 @@
 # Gameplay Systems Spec
 
-> Skills, perks, magic, crafting, inventory — each its own module under `modules/`. Roadmap: [`ROADMAP.md` § Phase 8](../ROADMAP.md). All data-driven via TOML per [`tech-stack.md` § Data Layer](../tech-stack.md). Open data-model questions: [`planning-gaps.md`](../planning-gaps.md) #18–22.
+> Skills, perks, magic, crafting, inventory — each its own module under `modules/`. Roadmap: [`ROADMAP.md` § Phase 8](../ROADMAP.md). All data-driven via TOML per [`tech-stack.md` § Data Layer](../tech-stack.md). Open data-model questions: [`gaps.md`](../gaps.md) #18–22.
 
 ## Skills (`modules/skills/`)
 
@@ -39,7 +39,7 @@ Data: effects + schools in TOML; player-made spells stored in save.
 Atelier-style multi-stage synthesis:
 
 - **Stages** — gather → process → synthesize, each gated by skill + station
-- **Quality** — derived from `f(skill_level, ingredient_qualities, station_tier, rng_seed)`; exact formula in [`planning-gaps.md` #21](../planning-gaps.md)
+- **Quality** — derived from `f(skill_level, ingredient_qualities, station_tier, rng_seed)`; exact formula in [`gaps.md` § 3](../gaps.md)
 - **Recipe discovery** — locked recipes revealed by gameplay events (NPC teach, find scroll, experiment with ingredients)
 - **Synthesis UI** — Atelier-style ingredient placement + slot effects
 
@@ -57,4 +57,4 @@ Data: recipes in TOML; stations defined as entity types.
 
 - All five systems hook into the [editability policy](../ARCHITECTURE.md#cross-cutting-concerns) when actions modify the world (mining = inventory + voxel edit; spell = magic + voxel edit; crafting station = scene-fixed)
 - All five expose mod-replaceable extensions via the [stable C ABI](../engine-vs-game.md)
-- Quest system ([`planning-gaps.md` #18](../planning-gaps.md)) consumes events from all five
+- Quest system ([`gaps.md` § 3](../gaps.md)) consumes events from all five

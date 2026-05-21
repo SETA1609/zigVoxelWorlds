@@ -1,6 +1,8 @@
 # Engine References — What to Implement from Hazel, Luanti, Godot, Unreal
 
-> What we are borrowing, from where, and at what depth. Action-oriented, not a reference catalog. Cross-reference: [`vision.md`](vision.md) + [`mission.md`](mission.md), [`vision.md`](vision.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`ROADMAP.md`](ROADMAP.md).
+> What we are borrowing, from where, and at what depth. Action-oriented, not a reference catalog. Cross-reference: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`ROADMAP.md`](ROADMAP.md).
+>
+> **Per-gap resolution patterns:** see [`gap-references.md`](gap-references.md) — maps each missing system in [`gaps.md`](gaps.md) to the specific reference-engine files that solve it, with adaptation notes.
 
 Paths use `$REFS/<engine>/` — set `REFS` to wherever you cloned the reference engines (e.g. `export REFS=~/refs` then `git clone https://github.com/godotengine/godot $REFS/godot`). The repos referenced: Hazel, luanti-custom (private fork of Luanti), godot, UnrealEngine.
 

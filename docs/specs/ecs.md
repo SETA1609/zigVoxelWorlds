@@ -23,7 +23,7 @@
 
 ## Open decisions
 
-- `Handle` layout — u64 `(generation, index)` vs `(server_id, generation, index)` ([`planning-gaps.md` #7](../planning-gaps.md))
+- `Handle` layout — u64 `(generation, index)` vs `(server_id, generation, index)` ([`gaps.md` § 3](../gaps.md))
 - Component size limits + per-archetype memory budgets
 - Lifecycle: when do entities get GC'd, deferred-destroy queue semantics
 
