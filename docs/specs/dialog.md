@@ -219,9 +219,20 @@ Both clamp to a 0.5–1.5× band. Numbers tunable per game.
 
 Refusals: NPCs refuse to buy items below disposition X; refuse stolen goods unless they're a fence; refuse weapons unless they're an arms dealer.
 
-### Optional: Barter mini-game (v1.x)
+### Disposition manipulation — not a separate mini-game
 
-Morrowind-style "offer" UI for haggling. Defer to v1.1 — primary trade is buy/sell to keep v1.0 scope tight.
+"Barter" in zVoxRealms is **not** a separate haggling mini-game. It's the existing disposition system exposed through multiple gameplay paths. Higher disposition → better prices automatically (see the formula above). Players raise disposition through:
+
+| Path | Mechanism | When |
+| --- | --- | --- |
+| **Bribery** | Give gold from inventory directly to the NPC | Always available; cost-effective at low disposition, diminishing returns at high |
+| **Questing for the NPC** | Complete tasks assigned by them or aligned with their faction | Quests with `on_complete.disposition_delta = +N { npc_id }` events |
+| **Favorable dialog choices** | Pick responses aligned with NPC's allegiance ("I support the current king" to a royalist NPC) | Dialog topics with `on_select.disposition_delta = +N` for matching factional or personal preferences |
+| **Persuasion magic** | Charm / Calm / Command spells from the magic system (per [`specs/gameplay.md`](gameplay.md) magic) | Spell effects with `target_attribute = "disposition" + duration` |
+
+All four paths share the same underlying disposition value (per-NPC). No separate "barter skill" check. The Morrowind-style "offer slider + click-button-X-times-until-NPC-agrees" mini-game is **not** in scope.
+
+Implementation cost: disposition system already needs to exist for dialog gating + price calculation. The four manipulation paths are just additional fire-sites for the existing `disposition_changed` event. All ship in v1.0 (Phase 8 gameplay modules).
 
 ## Services mode
 
@@ -333,7 +344,7 @@ Read for *information density* + *modal flow*. No verbatim port.
 ## Open decisions
 
 - **Disposition surface** — show numeric value (Daggerfall-style) or inferred label only ("warm / neutral / cold")? Modern preference is inferred; Daggerfall fans expect numeric. Per-game `[engine_options]` toggle.
-- **Barter mini-game** — v1.0 = simple buy/sell only; v1.1 = optional Morrowind-style barter. Decision: defer.
+- **Barter mini-game** — **not in scope**. Disposition manipulation through bribery / questing / favorable dialog / persuasion magic ships in v1.0; no separate Morrowind-style haggling slider. See § Disposition manipulation above.
 - **Co-op multi-modal** — per-player local pause vs shared modal. Default: per-player local. Per-quest opt-in to shared (e.g. for crucial story conversations).
 - **Stolen-goods detection** — does the merchant recognize stolen items? Per-game gameplay decision. Mechanism (item flag + merchant flag check) is engine-supported.
 - **Service-specific sub-modals** — "Identify which item?" pops another modal layer; need a max-depth limit (probably 2: primary modal + one sub-modal). Anything deeper = bad UX.
