@@ -206,31 +206,75 @@ Two inventory grids, prices shown per item, with **buy/sell** as the primary flo
 - `LB/RB` switches which grid has focus
 - Quantity prompt for stackable items (Bread × 3 → "Sell how many? 1 / 2 / 3 / all")
 
-### Disposition-driven pricing
+### Price formula — disposition + barter skill + perks + faction
 
-Per [`specs/gameplay.md`](gameplay.md):
+Per [`specs/gameplay.md`](gameplay.md) skill + perk systems. Four independent modifiers stack additively:
 
 ```text
-sell_price  = base_price × (0.5 + disposition × 0.005 + barter_skill × 0.003)   capped at 1.0×
-buy_price   = base_price × (1.5 - disposition × 0.005 - barter_skill × 0.003)   floored at 1.0×
+disposition_term  = disposition × 0.005      // 0..0.5 from 0..100 disposition
+barter_term       = barter_skill × 0.003     // 0..0.3 from 0..100 skill
+faction_term      = faction_rep × 0.001      // 0..0.1 from 0..100 rep with this NPC's faction
+perks_sell_bonus  = sum of active sell-side perks (see § Trade perks below)
+perks_buy_bonus   = sum of active buy-side perks
+
+sell_price = base_price × (0.5 + disposition_term + barter_term + faction_term + perks_sell_bonus)
+             clamped to sell_cap × base_price   (default cap = 1.0×; perks can raise)
+
+buy_price  = base_price × (1.5 - disposition_term - barter_term - faction_term - perks_buy_bonus)
+             clamped to buy_floor × base_price  (default floor = 1.0×; perks can lower)
 ```
 
-Both clamp to a 0.5–1.5× band. Numbers tunable per game.
+Both clamp to a 0.5–1.5× band by default. Numbers tunable per game (declared in `[engine_options]` of [`project.toml`](data-schemas.md)).
 
 Refusals: NPCs refuse to buy items below disposition X; refuse stolen goods unless they're a fence; refuse weapons unless they're an arms dealer.
 
-### Disposition manipulation — not a separate mini-game
+### Barter skill — XP grown by use
 
-"Barter" in zVoxRealms is **not** a separate haggling mini-game. It's the existing disposition system exposed through multiple gameplay paths. Higher disposition → better prices automatically (see the formula above). Players raise disposition through:
+`barter_skill` is a tracked skill in the classless skill system ([`specs/gameplay.md`](gameplay.md) § Skills), per-character, range 0..100. It grows by use:
+
+- Each completed sale or purchase grants a small XP increment to barter skill (scaled by transaction value to avoid grinding via 1-gold sales)
+- Skill milestones (25 / 50 / 75 / 100) unlock perk tiers — see § Trade perks
+- Skill level feeds the `barter_term` in the formula directly (no separate "check" on each transaction)
+
+**No haggling mini-game.** No "offer slider" UI, no click-button-X-times-until-NPC-agrees. The whole pricing experience is: pick item → see its price → confirm. Price reflects the player's current disposition + barter skill + faction rep + perks at that moment.
+
+### Trade perks — layered on top of the skill
+
+Each game defines its own perks (TOML in `<project>/assets/data/perks/`). For a Daggerfall-style game, typical trade perks:
+
+| Perk | Unlock | Effect |
+| --- | --- | --- |
+| **Apprentice Trader** | barter skill 25 | `perks_sell_bonus += 0.05`, `perks_buy_bonus += 0.05` |
+| **Journeyman Trader** | barter skill 50 | additional `+0.05` to both terms (stacks) |
+| **Master Trader** | barter skill 75 | additional `+0.05` to both; **raises sell_cap to 1.2×**, **lowers buy_floor to 0.8×** |
+| **Grandmaster Trader** | barter skill 100 | sell_cap to 1.5×; buy_floor to 0.5× — full price-band override |
+| **Silver Tongue** | quest-gated | bribery gives 2× disposition delta per gold spent |
+| **Smooth Talker** | charisma 60 | favorable dialog topics give +2 disposition instead of +1 |
+| **Fence's Favor** | faction: thieves' guild | merchants of opposing faction don't refuse stolen goods (still get worse prices) |
+| **Connoisseur** | skill 50 + quest | reveals true item rarity in inspect view; immune to seller misrepresentation |
+
+Perks are data-driven; the engine just sums `perks_sell_bonus` / `perks_buy_bonus` per active perk per character. Adding a new perk = adding a new TOML entry; no engine code change.
+
+### Disposition manipulation — four ways to raise disposition
+
+The `disposition_term` is set by the per-NPC disposition value (range 0..100). Players raise disposition through these gameplay paths — **none of which involve a mini-game**:
 
 | Path | Mechanism | When |
 | --- | --- | --- |
-| **Bribery** | Give gold from inventory directly to the NPC | Always available; cost-effective at low disposition, diminishing returns at high |
+| **Bribery** | Give gold from inventory directly to the NPC | Always available; cost-effective at low disposition, diminishing returns at high. Affected by `Silver Tongue` perk |
 | **Questing for the NPC** | Complete tasks assigned by them or aligned with their faction | Quests with `on_complete.disposition_delta = +N { npc_id }` events |
-| **Favorable dialog choices** | Pick responses aligned with NPC's allegiance ("I support the current king" to a royalist NPC) | Dialog topics with `on_select.disposition_delta = +N` for matching factional or personal preferences |
-| **Persuasion magic** | Charm / Calm / Command spells from the magic system (per [`specs/gameplay.md`](gameplay.md) magic) | Spell effects with `target_attribute = "disposition" + duration` |
+| **Favorable dialog choices** | Pick responses aligned with NPC's allegiance ("I support the current king" to a royalist NPC) | Dialog topics with `on_select.disposition_delta = +N` for matching factional or personal preferences. Affected by `Smooth Talker` perk |
+| **Persuasion magic** | Charm / Calm / Command spells from the magic system (per [`specs/gameplay.md`](gameplay.md) magic) | Spell effects with `target_attribute = "disposition" + duration` — temporary boost while spell is active |
 
-All four paths share the same underlying disposition value (per-NPC). No separate "barter skill" check. The Morrowind-style "offer slider + click-button-X-times-until-NPC-agrees" mini-game is **not** in scope.
+Per-NPC disposition is persistent across saves (per [`ARCHITECTURE.md`](../ARCHITECTURE.md) save model). The per-spell-duration boost from persuasion magic does NOT persist when the spell expires.
+
+### Trade events for hooks
+
+Per [`specs/events.md`](events.md), trade fires:
+
+- `trade.completed { npc, player, items_in, items_out, gold_delta }` — quest hooks, achievement hooks
+- `skill.gained { entity, skill_id = "barter", xp_delta }` — skill-progression UI
+- `disposition_changed { npc, old, new, source = "bribery" | "quest" | "dialog" | "spell" }` — for quest gates that care about *how* the disposition changed
 
 Implementation cost: disposition system already needs to exist for dialog gating + price calculation. The four manipulation paths are just additional fire-sites for the existing `disposition_changed` event. All ship in v1.0 (Phase 8 gameplay modules).
 
