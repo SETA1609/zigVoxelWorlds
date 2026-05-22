@@ -70,7 +70,8 @@ We've succeeded in this phase of the mission when:
 - **Phase 5 complete:** physics + Tracy integration; can profile a frame in real Tracy
 - **Phase 11 complete:** Project Manager opens at no-arg launch; creates a new project; re-execs into editor
 - **Phase 13 complete:** export pipeline produces a per-project `libzvox-runtime` containing only enabled modules, verified by `nm` showing missing-module symbols are absent
-- **Phase 15 complete:** v1 vertical slice — town + dungeon + 4p co-op + mod loader live, shipped as an exported per-project bundle, running on a clean machine without Zig installed
+- **Phase 15 complete:** v1.0 voxel Daggerfall slice — one town, 3–5 dungeons, one main quest line, classless skills + spellmaking + crafting, 4p co-op stable for a 1-hour session, mod loader live, modkit shipped. Released as an exported per-project bundle on Steam, running on a clean machine without Zig installed.
+- **Post-v1.0 (v1.1–v1.3, ~10 months total):** voxel rogue-like → voxel Stardew → voxel Atelier, each shipped as a separate Steam product reusing the v1.0 engine + content-authoring tools. See [`vision.md`](vision.md) § Shipping strategy
 
 Each phase is **vertical-slice-driven**: it ends with something runnable, not a half-built abstraction.
 

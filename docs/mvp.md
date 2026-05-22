@@ -4,7 +4,7 @@
 
 **MVP = Phase 1 + Phase 2 delivered.**
 
-The MVP is **not** the v1 game-playable vertical slice — that's Phase 15. Conflating them creates pressure to declare "done" prematurely. The MVP validates the *architecture*; the vertical slice validates the *product*.
+The MVP is **not** the v1.0 game release — that's Phase 15. Conflating them creates pressure to declare "done" prematurely. The MVP validates the *architecture*; v1.0 ships the **voxel Daggerfall slice** (one target game, not all four — see [`vision.md`](vision.md) § Shipping strategy). The other three voxel games (rogue-like / Stardew / Atelier) follow as v1.1–v1.3 content-only derivatives.
 
 ## Definition of done
 

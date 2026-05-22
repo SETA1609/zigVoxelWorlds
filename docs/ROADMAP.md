@@ -175,11 +175,13 @@ Spec: [`engine-vs-game.md`](engine-vs-game.md) (modding ABI is the same stable C
 
 ---
 
-## Phase 15: v1 Vertical Slice
+## Phase 15: v1.0 — Voxel Daggerfall Slice
 
-Integration milestone: one town, one dungeon, the full skill/magic/crafting loop, 4-player co-op stable for a 1-hour session, mod loader live, replay system for debugging + content creation. Shipped as an exported per-project bundle on a clean machine.
+**v1.0 ships one target: the voxel Daggerfall-clone slice.** Not all four target games. The other three (voxel rogue-like / voxel Stardew / voxel Atelier) are v1.1–v1.3 derivatives — content-only reskins on top of the same engine + modkit. See [`vision.md`](vision.md) § Shipping strategy.
 
-**Milestone:** v1.0 vertical slice playable end-to-end.
+Integration milestone: one town, 3–5 dungeons, one main quest line, classless skills + spellmaking + crafting, 4-player co-op stable for a 1-hour session, mod loader live, modkit shipped for third-party mods, replay system for debugging + content creation. Shipped as an exported per-project bundle on a clean machine. Released commercially on Steam.
+
+**Milestone:** v1.0 voxel Daggerfall slice playable end-to-end on a clean machine without Zig installed; modkit available for third-party modders.
 
 ---
 

@@ -85,15 +85,32 @@ The vision is sharpened by what's explicitly out of scope.
 
 ---
 
+## Shipping strategy — v1.0 = the voxel Daggerfall slice; v1.1+ = derivatives
+
+**v1.0 commits to one target: the voxel Daggerfall-clone slice.** Not all four games at once.
+
+Reasoning: Daggerfall-clone is the **superset** of what the other three target games need. Building it forces the engine to be complete (animation, large-world streaming, dialog, faction system, quest system, modding). The other three are then content-only derivatives — same engine, different `core_mod`, different scene policies.
+
+The shipping ladder:
+
+| Version | Target | What's new beyond previous |
+| --- | --- | --- |
+| **v1.0** | Voxel Daggerfall slice (one town, 3–5 dungeons, one main quest line, classless skills + spellmaking + crafting, 4-coop, mod loader live, modkit shipped) | The engine + the full content pipeline + first shipped game |
+| **v1.1** | Voxel rogue-like dungeon crawler | Different `core_mod` + permadeath save flag + procedural-run scoping. ~2–3 months content + tweaks |
+| **v1.2** | Voxel Stardew Valley | Different `core_mod` + cozy NPC schedules + edit-policy for farm/mines + relationships. ~3–4 months content |
+| **v1.3** | Voxel Atelier-style crafting RPG | Different `core_mod` + synthesis depth + party-affinity. ~3–4 months content |
+
+Total v1.1 → v1.3: **~10 months**. After Daggerfall ships, the other three are content packs leveraging the same engine + modkit + content-authoring tools. Industry precedent: Bethesda's Creation Engine line (Morrowind → Oblivion → Skyrim → Fallout 3/4) — same engine, evolving content.
+
 ## 3-year horizon
 
 At the end of the three-year arc the engine should be:
 
-- **v1.0 shipped** — covers Phases 0–15 of [`ROADMAP.md`](ROADMAP.md), including a playable Daggerfall-clone vertical slice
-- **One published target game** — at least one of the four target shapes shipped commercially (Steam) using the engine, demonstrating the export pipeline end-to-end
-- **A modding scene** — Steam Workshop integration live, with at least one third-party mod available for the published game
-- **Documented stable C ABI** — versioned, with deprecation policy. Mods shipped at v1 still work at v1.x.
-- **A small but real community** — developers using the engine to build their own games. Not "Godot scale" — closer to early Defold or LÖVE community size is success.
+- **v1.0 shipped** — covers Phases 0–15 of [`ROADMAP.md`](ROADMAP.md), shipping the voxel Daggerfall slice as a playable commercial release on Steam
+- **The remaining three voxel games (rogue-like / Stardew / Atelier) drafted** — at least one of them in pre-release / wishlist phase
+- **A modding scene** — Steam Workshop integration live, with at least one third-party mod available for the Daggerfall game
+- **Documented stable C ABI** — versioned, with deprecation policy. Mods shipped at v1 still work at v1.x
+- **A small but real community** — developers using the engine to build their own voxel games. Not "Godot scale" — closer to early Defold or LÖVE community size is success
 
 ---
 
