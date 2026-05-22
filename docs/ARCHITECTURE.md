@@ -13,9 +13,9 @@ The engine is named **zVoxRealms**. The repo `zigVoxelWorlds` hosts its source.
 
 zVoxRealms is built to support the following game styles on top of a shared engine:
 
-- **Daggerfall-style open-world RPG** with Morrowind-style spellmaking
-- **Atelier-style crafting/alchemy RPG**
-- **Stardew Valley-style life/farming sim** (voxel)
+- **Voxel Daggerfall-style open-world RPG** with Morrowind-style spellmaking
+- **Voxel Atelier-style crafting/alchemy RPG**
+- **Voxel Stardew Valley-style life/farming sim**
 - **Dungeon crawlers & endless-tower rogue-likes**
 - **Classless RPG systems** (Fallout/Daggerfall/Morrowind style)
 - **Multiplayer co-op** (4 players default; optional 40–50 player servers)

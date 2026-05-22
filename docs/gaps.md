@@ -175,11 +175,11 @@ Missing:
 - Push-constant range management
 - Draw-call sorting (front-to-back opaque, back-to-front transparent)
 
-#### §2.1.H — Add Phase 7.5: Presentation Layer → ⏳ NOT YET LANDED in ROADMAP
+#### §2.1.H — Add Phase 7.5: Presentation Layer → ✅ landed in [`ROADMAP.md`](ROADMAP.md)
 
-Specs §2.1.A through §2.1.G exist (above), but Phase 7.5 itself hasn't been added to [`ROADMAP.md`](ROADMAP.md) yet. **Outstanding action.**
+Phase 7.5 is now in the ROADMAP between Phase 7 (ECS) and Phase 8 (Gameplay). Groups the previously-spec'd presentation systems (animation, particles, audio, UI, events, lighting, materials, dialog) into one coherent phase.
 
-Items §2.1.A through §2.1.G usually ship together — they share a tick budget, a streaming model, and are driven by gameplay events. Suggest a **new phase** between Phase 7 (ECS) and Phase 8 (Gameplay):
+Original rationale (kept for context): items §2.1.A through §2.1.G ship together — they share a tick budget, a streaming model, and are driven by gameplay events. Slot before Phase 8 so gameplay modules can emit events that the presentation layer renders.
 
 > **Phase 7.5 — Presentation Layer**
 > Materials + shader registry + scene lighting + decals + post-processing. Animation state machines + skeletal/voxel animation. GPU particle / VFX system. 3D positional audio with bus mixing + reverb zones + music streaming. Weather + time-of-day. In-game UI engine (layout + widgets + controller nav). Event/messaging bus. Game logic emits events; presentation layer renders them.
@@ -324,14 +324,7 @@ A meaningful accessibility baseline is also a Steam-page selling point, not just
 
 #### §2.2.K — Camera system → ✅ spec'd in [`specs/camera.md`](specs/camera.md) — first-person primary committed
 
-Flagged in §3 #14. Should be a real spec doc, not just a planning item:
-
-- Daggerfall = first-person, FoV ~75°
-- Stardew = top-down ortho or shallow 3D
-- Atelier = third-person orbit
-- Rogue-like = top-down or chase
-
-These are different camera math problems. The engine should support all three through a camera-mode plug, or pick one for v1.0 and explicitly defer others to v1.1.
+Decision committed in [`specs/camera.md`](specs/camera.md): **first-person primary for all four target games**, with third-person added in v1.x. This dramatically simplifies the camera system relative to a multi-mode engine. The earlier per-game framing (Daggerfall FP / Stardew top-down / Atelier third-person / rogue-like top-down) was the assumed-different-cameras model — replaced by the unified first-person commitment.
 
 ### Tier 3: post-1.0 polish
 
@@ -423,7 +416,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 40. **🔥 `project.toml` `kind` + `parent_game` extension** — refinement of #1; needs `kind = "game" | "mod"` field and `[project.parent_game]` block for mod projects. Driven by the new "everything is a mod" model in [`engine-vs-game.md` § 3b](engine-vs-game.md)
 41. **⏰ before Phase 13** **Modkit format spec** — what the auto-generated `modkit/` directory contains: `modkit.toml` schema (engine + ABI versions, registered content IDs, enabled engine modules), `headers/` C ABI signature files, `sample_mod/` template, README contract. Outputs as part of game-project export. See [`engine-vs-game.md` § 3b](engine-vs-game.md)
 42. **⏰ before Phase 14** **Mod-project workflow in editor** — UI flow: open modkit → "New Mod Project" → editor shows parent game content read-only + new mod content writable. Needs design in [`specs/project-manager.md`](specs/project-manager.md) + [`specs/editor.md`](specs/editor.md)
-43. **🔥 Phase 7.5 (Presentation Layer)** — proposed in §2.1.H; **needs to land in [`ROADMAP.md`](ROADMAP.md)** alongside the existing 15 phases. Slots between Phase 7 (ECS) and Phase 8 (Gameplay Modules)
+43. ~~**🔥 Phase 7.5 (Presentation Layer)**~~ → ✅ **landed**: Phase 7.5 added to [`ROADMAP.md`](ROADMAP.md) between Phase 7 (ECS) and Phase 8 (Gameplay Modules)
 44. **⏰ before Phase 9** **Edit-policy ownership transitions in multiplayer** — server is authoritative on ownership (plot purchases, quest unlocks, faction membership). Client policy state must update on a server broadcast. Race conditions during simultaneous ownership-change + voxel-edit attempts need defined semantics. See [`specs/scene.md` § Ownership transitions](specs/scene.md)
 45. **⏰ before Phase 13** **`session_only` + `transient` delta serialization rules** — save format must gracefully omit non-persistent region deltas. Detection criteria + recovery on partial-save corruption. See [`specs/scene.md` § Persistence semantics](specs/scene.md)
 46. **⏰ before Phase 6** **Meshified-chunk LOD interaction** — meshified chunks can bake LOD at multiple distance tiers; voxel chunks generate LOD dynamically. Define coexistence + transition behavior. See [`specs/voxel.md` § Meshified static chunks](specs/voxel.md)

@@ -4,7 +4,7 @@
 
 ## The vision in one sentence
 
-**zVoxRealms is the engine where a solo developer can ship a Daggerfall-class voxel RPG, a voxel Stardew Valley, an Atelier-style crafting game, or a rogue-like dungeon crawler — co-op-ready by default, running well on the cheapest PC the player owns, modded as easily as Minecraft, and exported as a single small binary that contains only what that game needs.**
+**zVoxRealms is the engine where a solo developer can ship a voxel Daggerfall-class RPG, a voxel Stardew Valley, a voxel Atelier-style crafting game, or a voxel rogue-like dungeon crawler — co-op-ready by default, running well on the cheapest PC the player owns, modded as easily as Minecraft, and exported as a single small binary that contains only what that game needs.**
 
 That sentence is the vision. Everything below is what each piece of it means.
 
