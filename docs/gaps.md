@@ -10,7 +10,7 @@ Three sections:
 
 - **§1. Canonical engine cores — alignment** — what industry-standard cores exist (per Jason Gregory, *Game Engine Architecture*) and how zVoxRealms stacks up against each
 - **§2. Missing systems & features** — what we lack to ship the four target games (tier-ranked: mission-blocking → usability-blocking → post-1.0 polish)
-- **§3. Open decisions** — specific data-schema / architecture / process choices that need to be made before or during named phases
+- **§3. Open decisions** — specific data-schema / architecture / process choices that need to be made before or during named phases (43 items; 1 resolved)
 
 **Status legend (§1):** ✅ aligned · ⚠ partial · ❌ missing
 **Priority tags (§3):** 🔥 urgent (unblocks Phase 0) · ⏰ before-phase (named in entry) · 📅 later (Phase 12+ / post-v1.0)
@@ -31,41 +31,51 @@ The industry-standard engine layering, from Jason Gregory's *Game Engine Archite
 | 3 | Resource manager | asset loading, caching, lifetime, async I/O, hot-reload, refcounting | ✅ | [`tech-stack.md`](tech-stack.md) § Asset Pipeline + Phase 4; GUID-based assetdb |
 | 4 | Renderer — RHI | graphics API wrapper | ✅ | `RenderServer` + Vulkan backend; `ARCHITECTURE.md` § Server Pattern |
 | 4 | Renderer — scene + culling | scene graph, frustum / occlusion | ⚠ | [`specs/scene.md`](specs/scene.md) covers instancing; **frustum/occlusion culling undesigned** |
-| 4 | Renderer — **materials** | albedo/normal/rough/metallic descriptors per surface | ❌ | nowhere |
-| 4 | Renderer — **shader management** | runtime registry, `VkPipeline` cache, descriptor-set layouts | ⚠ | glslang adapter compiles GLSL→SPIR-V (Phase 4); **runtime shader management undesigned** |
-| 4 | Renderer — **particles / VFX** | GPU emitters, particle update + render | ❌ | listed below in §2.1.B |
-| 4 | Renderer — **post-processing** | tonemap, bloom, FXAA, vignette | ❌ | nowhere |
-| 4 | Renderer — GUI rendering | in-game UI rasterization | ⚠ | ImGui for editor; in-game UI design listed in §2.1.D |
-| 4 | Renderer — **lighting model** | directional sun, point/spot lights, ambient probes | ⚠ | voxel lighting in [`specs/voxel.md`](specs/voxel.md); **scene-level lighting undesigned** |
-| 4 | Renderer — **decals** | gunshot marks, blood, footprints | ❌ | nowhere |
-| 5 | **Animation** | skeletal, morph targets, state machines, blending, IK | ❌ | listed below in §2.1.A |
-| 6 | **Audio** | playback, mixing, 3D positional, bus routing, streaming, DSP | ⚠ | miniaudio library chosen in [`tech-stack.md`](tech-stack.md); **architecture undesigned** — see §2.1.C |
-| 7 | Physics + collision | broadphase, narrowphase, rigid body, character controller | ✅ | [`specs/physics.md`](specs/physics.md) + Phase 5 |
-| 8 | Gameplay — ECS | object model, component storage | ✅ | [`specs/ecs.md`](specs/ecs.md) + Phase 7 |
-| 8 | Gameplay — world | scene/instancing | ✅ | [`specs/scene.md`](specs/scene.md) |
-| 8 | Gameplay — scripting | game logic compile + load | ✅ | [`engine-vs-game.md`](engine-vs-game.md) § 5 |
-| 8 | Gameplay — **events / messaging** | pub/sub, signal/slot, observer | ❌ | nowhere — see §2.1.E |
-| 9 | **AI** | pathfinding, behavior systems (BT/GOAP/utility), perception | ⚠ | flagged in §3 #19; no spec doc |
-| 10 | Networking | replication, prediction, server authority | ✅ | [`specs/multiplayer.md`](specs/multiplayer.md) + Phase 10 |
-| 11 | VFX broader — **weather** | rain/snow/wind systems | ❌ | scenes can declare; **no engine to execute** — see §2.1.F |
-| 11 | VFX broader — **time-of-day** | day/night cycle, sun rotation | ⚠ | scenes can override; **no cycle subsystem** |
-| 12 | Front-end — UI | HUD, menus, dialog | ⚠ | format chosen (TOML + SCSS); engine in §2.1.D |
-| 12 | Front-end — **transitions** | fade-to-black, scene transitions | ❌ | nowhere |
-| 12 | Front-end — **FMV / cutscenes** | video playback, scripted scenes | ❌ | scope-undecided |
+| 4 | Renderer — materials | albedo/normal/rough/metallic descriptors per surface | ✅ spec | [`specs/materials.md`](specs/materials.md) |
+| 4 | Renderer — shader management | runtime registry, `VkPipeline` cache, descriptor-set layouts | ✅ spec | [`specs/materials.md`](specs/materials.md) (covered together) |
+| 4 | Renderer — particles / VFX | GPU emitters, particle update + render | ✅ spec | [`specs/particles.md`](specs/particles.md) |
+| 4 | Renderer — **post-processing** | tonemap, bloom, FXAA, vignette | ❌ | **nowhere** — needs spec |
+| 4 | Renderer — GUI rendering | in-game UI rasterization | ✅ spec | [`specs/ui.md`](specs/ui.md) + ImGui for editor |
+| 4 | Renderer — lighting model | directional sun, point/spot lights, ambient probes | ✅ spec | [`specs/lighting.md`](specs/lighting.md) |
+| 4 | Renderer — decals | gunshot marks, blood, footprints | ✅ spec | [`specs/lighting.md`](specs/lighting.md) (covered with lighting) |
+| 4 | Renderer — **scene + culling** | scene graph, frustum / occlusion | ⚠ | [`specs/scene.md`](specs/scene.md) covers instancing; **frustum/occlusion culling undesigned** |
+| 5 | Animation | skeletal, morph targets, state machines, blending, IK | ✅ spec | [`specs/animation.md`](specs/animation.md) |
+| 6 | Audio | playback, mixing, 3D positional, bus routing, streaming, DSP | ✅ spec | [`specs/audio.md`](specs/audio.md) |
+| 7 | Physics + collision | broadphase, narrowphase, rigid body, character controller | ✅ spec | [`specs/physics.md`](specs/physics.md) + Phase 5 |
+| 8 | Gameplay — ECS | object model, component storage | ✅ spec | [`specs/ecs.md`](specs/ecs.md) + Phase 7 |
+| 8 | Gameplay — world | scene/instancing | ✅ spec | [`specs/scene.md`](specs/scene.md) |
+| 8 | Gameplay — scripting | game logic compile + load | ✅ spec | [`engine-vs-game.md`](engine-vs-game.md) § 5 |
+| 8 | Gameplay — events / messaging | pub/sub, signal/slot, observer | ✅ spec | [`specs/events.md`](specs/events.md) |
+| 9 | **AI** | pathfinding, behavior systems (BT/GOAP/utility), perception | ❌ | flagged §3 #19; **no spec doc** — needs `specs/ai.md` |
+| 10 | Networking | replication, prediction, server authority | ✅ spec | [`specs/multiplayer.md`](specs/multiplayer.md) + Phase 10 |
+| 11 | VFX broader — weather | rain/snow/wind systems | ✅ spec | [`specs/lighting.md`](specs/lighting.md) (covered together) |
+| 11 | VFX broader — time-of-day | day/night cycle, sun rotation | ✅ spec | [`specs/lighting.md`](specs/lighting.md) (covered together) |
+| 12 | Front-end — UI | HUD, menus, dialog | ✅ spec | [`specs/ui.md`](specs/ui.md) |
+| 12 | Front-end — **transitions** | fade-to-black, scene transitions | ❌ | **nowhere** — needs spec or merge into `specs/ui.md` |
+| 12 | Front-end — **FMV / cutscenes** | video playback, scripted scenes | ❌ | **scope-undecided** — out of v1.0? |
 | 13 | Tools / pipeline | asset conditioning, editor, debug, profiler | ✅ | [`specs/editor.md`](specs/editor.md), [`specs/project-manager.md`](specs/project-manager.md), importers, export pipeline |
-| 14 | Save/load | save format, slots, autosave UI | ✅ partial | save model in [`ARCHITECTURE.md`](ARCHITECTURE.md) + Phase 13; **save-slot UX in §2.2.C** |
+| 14 | Save/load | save format, slots, autosave UI | ✅ spec | save model in [`ARCHITECTURE.md`](ARCHITECTURE.md); slot UX in [`specs/save-ux.md`](specs/save-ux.md); binary format still open in §3 #6 |
 | 14 | Replay | record + playback | ✅ | ROADMAP Phase 15 milestone |
 | 14 | Telemetry | metrics, traces, structured logs | ✅ | OTel three-tier observability ([`tech-stack.md`](tech-stack.md) § Observability) |
-| 14 | **Accessibility** | colorblind, screen reader, key remap, font scaling | ❌ | nowhere — see §2.2.J |
-| 14 | **Camera system** | first-person / top-down / third-person math | ⚠ | flagged §3 #14; no spec |
+| 14 | Accessibility | colorblind, key remap, font scaling | ✅ spec | [`specs/accessibility.md`](specs/accessibility.md) |
+| 14 | Camera system | first-person primary; third-person v1.x | ✅ spec | [`specs/camera.md`](specs/camera.md) — committed first-person primary |
 
 ### Summary
 
-**Aligned:** structural layers (1, 2, 3, 7, 8 partial, 10, 13, 14 partial). The plumbing is well-documented.
+**Aligned + spec'd**: nearly the entire canonical cores set now has either a design doc or implementation plan. The remaining gaps fall into three buckets.
 
-**Under-specified:** renderer beyond the RHI (4 — materials, shaders, lighting, post-process, decals), all of presentation (5, 6, 11, 12), event bus (8 partial), AI (9), accessibility, camera.
+**Still ❌ MISSING — needs a spec:**
 
-**Critical observation:** the under-specified areas are exactly what the four target games need most. Daggerfall + Stardew + Atelier + rogue-likes are all **presentation-heavy + content-heavy** game shapes. Presentation is on the critical path, not optional polish.
+- AI subsystem (§1.9) — utility / BT / GOAP / perception. No spec yet
+- Post-processing pipeline (§1.4) — tonemap / bloom / FXAA / vignette
+- Front-end transitions (§1.12) — fade-to-black, scene transitions
+- FMV / cutscenes (§1.12) — scope-undecided for v1.0
+
+**Still ⚠ PARTIAL — design exists, depth needed:**
+
+- Scene + frustum/occlusion culling (§1.4) — instancing spec'd; culling design undone
+
+**✅ All other systems have either a working baseline or a current spec stub.** This is a major shift from before — the rendering/presentation/gameplay-foundation layers now have known homes.
 
 ---
 
@@ -75,7 +85,9 @@ Tier 1 = mission-blocking. Tier 2 = usability-blocking. Tier 3 = post-1.0 polish
 
 ### Tier 1: mission-blocking — must land before v1.0
 
-#### §2.1.A — Animation system
+> **Status update:** as of this turn, every Tier 1 item except §2.1.H (Presentation Layer phase landing in ROADMAP) has a spec stub under `docs/specs/`. The remaining work is implementation in the relevant phase, not design. Entries below are kept for reference + as the implementation-status tracker.
+
+#### §2.1.A — Animation system → ✅ spec'd in [`specs/animation.md`](specs/animation.md)
 
 **Biggest single gap.** Daggerfall has thousands of animated NPCs. Stardew villagers walk schedules. Atelier characters animate during synthesis. Rogue-like monsters attack.
 
@@ -89,7 +101,7 @@ Missing:
 
 Reference: Godot's `AnimationTree`, Unreal's Anim Graph.
 
-#### §2.1.B — Particle / VFX system
+#### §2.1.B — Particle / VFX system → ✅ spec'd in [`specs/particles.md`](specs/particles.md)
 
 Magic effects, footstep dust, fire/smoke, rain, snow, blood, sparkles on Atelier synthesis. The magic system in [`specs/gameplay.md`](specs/gameplay.md) implicitly requires particles on screen but no system creates them.
 
@@ -100,7 +112,7 @@ Missing:
 - Particle-to-voxel-world interaction (sparks lighting things, snow piling on chunks)
 - Performance budget — particles are easy to over-spend on iGPU
 
-#### §2.1.C — Audio architecture beyond library choice
+#### §2.1.C — Audio architecture beyond library choice → ✅ spec'd in [`specs/audio.md`](specs/audio.md)
 
 [`tech-stack.md`](tech-stack.md) picks miniaudio. That's 10% of audio design. Missing:
 
@@ -111,7 +123,7 @@ Missing:
 - Occlusion (sound through walls quieter)
 - Voice / dialog system (subtitle sync, optional TTS fallback)
 
-#### §2.1.D — UI layout engine + widget set
+#### §2.1.D — UI layout engine + widget set → ✅ spec'd in [`specs/ui.md`](specs/ui.md)
 
 [`tech-stack.md`](tech-stack.md) says "TOML layout + SCSS styling." That's the *format*, not the *engine*. Missing:
 
@@ -124,7 +136,7 @@ Missing:
 
 ImGui handles editor UI. In-game UI (menus / HUDs / inventory / dialog) needs its own engine.
 
-#### §2.1.E — Event / messaging bus
+#### §2.1.E — Event / messaging bus → ✅ spec'd in [`specs/events.md`](specs/events.md)
 
 Gameplay foundation needs pub-sub: "player crafted X" → quest trigger + achievement trigger + sound effect + particle spawn. Without this, every system polls or hard-couples to every other.
 
@@ -137,7 +149,7 @@ Missing:
 
 Critical infrastructure for Phase 8 (gameplay modules). Specify before Phase 7.
 
-#### §2.1.F — Scene lighting, decals, weather, time-of-day
+#### §2.1.F — Scene lighting, decals, weather, time-of-day → ✅ spec'd in [`specs/lighting.md`](specs/lighting.md)
 
 Currently voxel lighting is local (per-chunk propagation) per [`specs/voxel.md`](specs/voxel.md). Scene-level lighting + decals + weather + time-of-day are absent. Missing:
 
@@ -149,7 +161,7 @@ Currently voxel lighting is local (per-chunk propagation) per [`specs/voxel.md`]
 - Particle-driven weather (rain, snow, dust)
 - Decal projection on voxel surfaces (gunshot marks, blood, footprints)
 
-#### §2.1.G — Materials + shader management
+#### §2.1.G — Materials + shader management → ✅ spec'd in [`specs/materials.md`](specs/materials.md)
 
 Currently the renderer is a `RenderServer` interface with a Vulkan backend. Mesh entities need material descriptors. Runtime needs shader pipeline-state caching.
 
@@ -163,7 +175,9 @@ Missing:
 - Push-constant range management
 - Draw-call sorting (front-to-back opaque, back-to-front transparent)
 
-#### §2.1.H — Add Phase 7.5: Presentation Layer
+#### §2.1.H — Add Phase 7.5: Presentation Layer → ⏳ NOT YET LANDED in ROADMAP
+
+Specs §2.1.A through §2.1.G exist (above), but Phase 7.5 itself hasn't been added to [`ROADMAP.md`](ROADMAP.md) yet. **Outstanding action.**
 
 Items §2.1.A through §2.1.G usually ship together — they share a tick budget, a streaming model, and are driven by gameplay events. Suggest a **new phase** between Phase 7 (ECS) and Phase 8 (Gameplay):
 
@@ -172,7 +186,7 @@ Items §2.1.A through §2.1.G usually ship together — they share a tick budget
 
 Probably 3–4 months solo. Currently the most under-scoped area of the entire project.
 
-#### §2.1.I — Threading model
+#### §2.1.I — Threading model → ✅ spec'd in [`specs/threading.md`](specs/threading.md)
 
 Flagged in §3 #12. **Blocks Phase 2** — you can't finalize `RenderServer` / `VoxelServer` / `PhysicsServer` shapes without knowing whether each runs on its own thread + how they communicate.
 
@@ -185,7 +199,7 @@ Needs spec'd before Phase 2 starts:
 
 Reference: Godot's `CommandQueueMT` ([`engine-references.md`](engine-references.md) → Godot § Server pattern). Create `docs/specs/threading.md`.
 
-#### §2.1.J — Content authoring beyond importers
+#### §2.1.J — Content authoring beyond importers → ✅ spec'd in [`specs/content-authoring.md`](specs/content-authoring.md)
 
 Phase 4 handles **import**. Source content has no plan:
 
@@ -211,7 +225,7 @@ If the engine doesn't provide **content-authoring tools** (procedural NPC genera
 
 Set up in Phase 0.5 or when first runnable code lands.
 
-#### §2.2.B — Localization (i18n / l10n)
+#### §2.2.B — Localization (i18n / l10n) → ✅ spec'd in [`specs/localization.md`](specs/localization.md) — gettext `.po` canonical
 
 Mentioned in §3 #15 but no roadmap phase. Even single-language v1.0 should plan:
 
@@ -223,7 +237,7 @@ Mentioned in §3 #15 but no roadmap phase. Even single-language v1.0 should plan
 
 Retrofitting localization is painful. Bake the API in from Phase 2 even if shipping English-only at v1.0.
 
-#### §2.2.C — Save UX beyond the binary format
+#### §2.2.C — Save UX beyond the binary format → ✅ spec'd in [`specs/save-ux.md`](specs/save-ux.md)
 
 [Phase 13](ROADMAP.md) handles save *format*. UX is missing:
 
@@ -233,7 +247,7 @@ Retrofitting localization is painful. Bake the API in from Phase 2 even if shipp
 - Steam Cloud sync + conflict resolution UI
 - Save corruption detection (checksums, recovery dialog)
 
-#### §2.2.D — Mod manager UX
+#### §2.2.D — Mod manager UX → ✅ spec'd in [`specs/mod-manager.md`](specs/mod-manager.md)
 
 Phase 14 has discovery + loading. User-facing UX is missing:
 
@@ -245,7 +259,7 @@ Phase 14 has discovery + loading. User-facing UX is missing:
 
 Without this, modding is "edit a config file by hand" — violates the "modded as easily as Minecraft" vision.
 
-#### §2.2.E — Diagnostics + crash dump pipeline
+#### §2.2.E — Diagnostics + crash dump pipeline → ✅ spec'd in [`specs/diagnostics.md`](specs/diagnostics.md)
 
 [Phase 12](ROADMAP.md) has libghostty for editor playtest logs. Shipped games need:
 
@@ -295,7 +309,7 @@ Steamworks adapter is planned. Need:
 - Non-Steam fallback (GOG Galaxy, EOS, disabled)
 - Cloud save quota awareness (Steam Cloud has per-game quotas)
 
-#### §2.2.J — Accessibility baseline
+#### §2.2.J — Accessibility baseline → ✅ spec'd in [`specs/accessibility.md`](specs/accessibility.md)
 
 Currently absent in docs. v1.0-blocking minimum:
 
@@ -308,7 +322,7 @@ Currently absent in docs. v1.0-blocking minimum:
 
 A meaningful accessibility baseline is also a Steam-page selling point, not just a moral one.
 
-#### §2.2.K — Camera system
+#### §2.2.K — Camera system → ✅ spec'd in [`specs/camera.md`](specs/camera.md) — first-person primary committed
 
 Flagged in §3 #14. Should be a real spec doc, not just a planning item:
 
@@ -342,7 +356,7 @@ Confirmed: these don't block v1.0. Listed to keep them tracked.
 
 ## §3. Open decisions
 
-38 items that aren't yet documented anywhere. Numbering is for citation, not priority. Use the tags for sequencing.
+43 items, of which 1 is **resolved** (#38 — camera, decided as first-person primary). Numbering is for citation, not priority. Use the tags for sequencing. The "→ ✅ decided" suffix marks resolved entries; the original number is preserved so prior references in other docs / commits keep working.
 
 ### §3.1 — Data schemas (the most urgent gap)
 
@@ -403,8 +417,12 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 35. **📅 before Phase 15** **Steam page / wishlist plan**
 36. **⏰ before Phase 10 OTel rollout** **Telemetry consent UX** — opt-in vs opt-out (GDPR)
 37. **⏰ before Phase 15** **Crash reporting** — local-only vs opt-in upload vs player-controlled (see §2.2.E)
-38. **⏰ before Phase 14** **Camera system spec** — see §2.2.K
+38. ~~**⏰ before Phase 14** **Camera system spec**~~ → ✅ **decided**: first-person primary for all four target games; third-person added in v1.x. See [`specs/camera.md`](specs/camera.md)
 39. **⏰ before Phase 14** **Steam Workshop + DLC integration hooks** — Workshop = `ISteamUGC` (subscribe/download/upload); DLC = `ISteamApps::BIsDlcInstalled` per DLC AppID. Cross-platform fallback for non-Steam builds. DLC distribution (bundled-and-gated vs download-on-purchase). Mod-DLC dependency semantics. See [`engine-vs-game.md` § 3b TODO](engine-vs-game.md) and [`specs/mod-manager.md`](specs/mod-manager.md) § Workshop+DLC
+40. **🔥 `project.toml` `kind` + `parent_game` extension** — refinement of #1; needs `kind = "game" | "mod"` field and `[project.parent_game]` block for mod projects. Driven by the new "everything is a mod" model in [`engine-vs-game.md` § 3b](engine-vs-game.md)
+41. **⏰ before Phase 13** **Modkit format spec** — what the auto-generated `modkit/` directory contains: `modkit.toml` schema (engine + ABI versions, registered content IDs, enabled engine modules), `headers/` C ABI signature files, `sample_mod/` template, README contract. Outputs as part of game-project export. See [`engine-vs-game.md` § 3b](engine-vs-game.md)
+42. **⏰ before Phase 14** **Mod-project workflow in editor** — UI flow: open modkit → "New Mod Project" → editor shows parent game content read-only + new mod content writable. Needs design in [`specs/project-manager.md`](specs/project-manager.md) + [`specs/editor.md`](specs/editor.md)
+43. **🔥 Phase 7.5 (Presentation Layer)** — proposed in §2.1.H; **needs to land in [`ROADMAP.md`](ROADMAP.md)** alongside the existing 15 phases. Slots between Phase 7 (ECS) and Phase 8 (Gameplay Modules)
 
 ---
 
