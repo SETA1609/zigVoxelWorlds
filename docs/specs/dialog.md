@@ -228,15 +228,20 @@ Both clamp to a 0.5–1.5× band by default. Numbers tunable per game (declared 
 
 Refusals: NPCs refuse to buy items below disposition X; refuse stolen goods unless they're a fence; refuse weapons unless they're an arms dealer.
 
-### Barter skill — XP grown by use
+### Barter skill — Fallout-style point allocation at level-up
 
-`barter_skill` is a tracked skill in the classless skill system ([`specs/gameplay.md`](gameplay.md) § Skills), per-character, range 0..100. It grows by use:
+`barter_skill` is a tracked skill in the classless skill system ([`specs/gameplay.md`](gameplay.md) § Skills), per-character, range 0..100. **Skills do not grow by use.** Instead (Fallout convention):
 
-- Each completed sale or purchase grants a small XP increment to barter skill (scaled by transaction value to avoid grinding via 1-gold sales)
+- Player gains gameplay XP from quests, combat, exploration → levels up character
+- At each level-up, player receives a **skill point pool** to allocate freely across all skills
+- **Tagged skills** (3 picked at character creation, Fallout-style) earn **double allocation rate** (1 spent point = 2 skill points)
+- **Non-tagged skills** earn 1:1
 - Skill milestones (25 / 50 / 75 / 100) unlock perk tiers — see § Trade perks
-- Skill level feeds the `barter_term` in the formula directly (no separate "check" on each transaction)
+- The trade price check reads the resulting barter skill value at transaction time. No separate tagged-vs-non-tagged branch in the formula — tagged status determined growth rate, not how the value is read
 
-**No haggling mini-game.** No "offer slider" UI, no click-button-X-times-until-NPC-agrees. The whole pricing experience is: pick item → see its price → confirm. Price reflects the player's current disposition + barter skill + faction rep + perks at that moment.
+This is the Fallout 1/2/3/NV model, not Morrowind. Rationale: clearer player agency (you choose what to invest in per level), no grind incentive (you don't farm transactions to grow skill), and the "tagged" flag at character creation matters across the whole game.
+
+**No haggling mini-game.** No "offer slider" UI, no click-button-X-times-until-NPC-agrees. The pricing experience is: pick item → see price → confirm. Price reflects current disposition + barter skill (Fallout-grown) + faction rep + perks at that moment.
 
 ### Trade perks — layered on top of the skill
 
@@ -273,7 +278,8 @@ Per-NPC disposition is persistent across saves (per [`ARCHITECTURE.md`](../ARCHI
 Per [`specs/events.md`](events.md), trade fires:
 
 - `trade.completed { npc, player, items_in, items_out, gold_delta }` — quest hooks, achievement hooks
-- `skill.gained { entity, skill_id = "barter", xp_delta }` — skill-progression UI
+- `skill.points_spent { entity, skill_id = "barter", points, tagged }` — fires when player allocates points at level-up (not on each transaction)
+- `level.up { entity, new_level, skill_points_granted }` — UI surfaces skill-point allocation screen
 - `disposition_changed { npc, old, new, source = "bribery" | "quest" | "dialog" | "spell" }` — for quest gates that care about *how* the disposition changed
 
 Implementation cost: disposition system already needs to exist for dialog gating + price calculation. The four manipulation paths are just additional fire-sites for the existing `disposition_changed` event. All ship in v1.0 (Phase 8 gameplay modules).
