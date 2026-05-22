@@ -4,7 +4,7 @@
 
 ## Mission statement
 
-**Build a Zig-first voxel engine that lets a solo developer ship Daggerfall-class RPGs, Stardew-style life sims, Atelier-style crafting games, and rogue-like dungeon crawlers — with 4-player co-op by default, host-authoritative networking, deterministic regen + delta saves, first-class modding, and per-project tree-shaken dynamic-lib export — running at 50–60 FPS on a low-end PC.**
+**Build a Zig-first voxel engine that lets a solo developer ship four kinds of voxel game — Daggerfall-class RPGs, Stardew-style life sims, Atelier-style crafting games, and rogue-like dungeon crawlers — with 4-player co-op by default, host-authoritative networking, deterministic regen + delta saves, first-class modding, and per-project tree-shaken dynamic-lib export — running at 50–60 FPS on a low-end PC. All four target games are voxel-3D; no 2D fallback, no mesh-only worlds.**
 
 That's the mission. Every commit either serves it, refactors toward it, or removes something that isn't.
 

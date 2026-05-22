@@ -12,29 +12,29 @@ That sentence is the vision. Everything below is what each piece of it means.
 
 ## The four target games
 
-Not example genres — the four concrete game shapes the engine is designed to support out of the box. Every architectural decision is evaluated against "does this serve at least one of these?"
+Not example genres — the four concrete game shapes the engine is designed to support out of the box. **All four are voxel games** — voxel-3D rendering, first-person camera primary, no 2D fallback, no mesh-only worlds. Triangle meshes appear only as additive content (character bodies, props, decorative meshes) on top of the voxel world. Every architectural decision is evaluated against "does this serve at least one of these?"
 
-1. **Daggerfall-style open-world RPG** with Morrowind-style spellmaking
-   - Massive seamless world (10 km² scalable), procedurally generated from seed
+1. **Voxel Daggerfall-style open-world RPG** with Morrowind-style spellmaking
+   - Massive seamless voxel world (10 km × 10 km × 2 km vertical, scalable to 4 km vertical), procedurally generated from seed
    - Classless skill/perk progression (Fallout/Morrowind/Daggerfall lineage)
    - Spellmaking: combine effects, custom magic schools
    - Mostly read-only world (towns, dungeons, terrain) with quest-state and player-progress saved
 2. **Voxel Stardew Valley** — life / farming sim
    - Same engine, same module set + a different scene policy
-   - World mostly read-only (town, paths, decoration)
+   - Voxel world, mostly read-only (town, paths, decoration)
    - **Editable subsets** — designated farm plots, mines, owned house interiors — through the scene edit-policy system
    - Crafting + relationships + day cycle + seasonal events
-3. **Atelier-style crafting / alchemy RPG**
+3. **Voxel Atelier-style crafting / alchemy RPG**
    - Multi-stage synthesis: gather → process → synthesize
    - Quality system derived from skill + ingredients
    - Recipe discovery
-   - Gathering zones with controlled editability (you can harvest, you can't reshape the cliff)
-4. **Rogue-like dungeon crawler** — endless tower
-   - Procedurally generated runs, each seed a fresh dungeon
+   - Voxel gathering zones with controlled editability (you can harvest, you can't reshape the cliff)
+4. **Voxel rogue-like dungeon crawler** — endless tower
+   - Procedurally generated voxel runs, each seed a fresh dungeon
    - Per-run state lost on death; meta-progression persists
    - Scene policy: dungeons fully destructible during the run, world hub read-only
 
-The engine is the *intersection* of what these four games need. If a feature serves none of them, it isn't in scope. If a feature serves exactly one, it ships as an optional module.
+The engine is the *intersection* of what these four voxel games need. If a feature serves none of them, it isn't in scope. If a feature serves exactly one, it ships as an optional module.
 
 ---
 
