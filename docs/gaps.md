@@ -426,6 +426,8 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 43. **🔥 Phase 7.5 (Presentation Layer)** — proposed in §2.1.H; **needs to land in [`ROADMAP.md`](ROADMAP.md)** alongside the existing 15 phases. Slots between Phase 7 (ECS) and Phase 8 (Gameplay Modules)
 44. **⏰ before Phase 9** **Edit-policy ownership transitions in multiplayer** — server is authoritative on ownership (plot purchases, quest unlocks, faction membership). Client policy state must update on a server broadcast. Race conditions during simultaneous ownership-change + voxel-edit attempts need defined semantics. See [`specs/scene.md` § Ownership transitions](specs/scene.md)
 45. **⏰ before Phase 13** **`session_only` + `transient` delta serialization rules** — save format must gracefully omit non-persistent region deltas. Detection criteria + recovery on partial-save corruption. See [`specs/scene.md` § Persistence semantics](specs/scene.md)
+46. **⏰ before Phase 6** **Meshified-chunk LOD interaction** — meshified chunks can bake LOD at multiple distance tiers; voxel chunks generate LOD dynamically. Define coexistence + transition behavior. See [`specs/voxel.md` § Meshified static chunks](specs/voxel.md)
+47. **⏰ before Phase 6** **Lighting re-bake cadence for meshified chunks** — pick between (a) periodic re-bake on time-of-day change vs. (b) per-vertex multi-channel lighting blended in the shader. See [`specs/voxel.md` § Lighting in meshified chunks](specs/voxel.md)
 
 ---
 
