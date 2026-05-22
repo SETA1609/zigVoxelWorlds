@@ -65,24 +65,41 @@ The acceptable workflow: read the reference, understand the *pattern*, close the
 - `clang-format` runs on every C/C++ file. The root `.clang-format` is `BasedOnStyle: Google` + project tweaks.
 - **Every `extern "C"` function must be `noexcept` and catch all exceptions.** This is non-negotiable for the mod ABI.
 
-### Commit messages
+### Commit rules
 
-Conventional-ish — `<type>(<scope>): <subject>`:
+**Atomic commits — one concern per commit.**
+
+A commit should be the smallest unit of meaningful change. Split when it grows. Specifically:
+
+- ✅ One feature, one fix, one refactor, one doc update — per commit
+- ✅ The repo compiles + tests pass at every commit (`git bisect` stays useful)
+- ✅ Each commit is revertable without breaking unrelated functionality
+- ❌ Don't mix a refactor with a feature in one commit — split them
+- ❌ Don't mix unrelated doc updates with code changes
+- ❌ Don't bundle "fixed typo + added module + reorganized 5 docs" — that's three commits
+
+When in doubt: would future-you, hitting `git log` after six months, understand each commit at a glance? If no, split it.
+
+**Conventional-ish format — `<type>(<scope>): <subject>`:**
 
 ```text
 feat(voxel): add greedy mesher for opaque blocks
-fix(render): clamp view distance to 8 chunks on iGPU detection
+fix(render): clamp view distance to 8 chunks on iGPU
 docs(roadmap): shrink Phase 0 MVP definition
 chore(deps): bump Jolt to 5.1.0
 ```
 
-Types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `chore`, `build`, `ci`.
+**Types:** `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `chore`, `build`, `ci`.
 
-Scope: subsystem name (`voxel`, `render`, `physics`, `net`, `editor`, `core`, `modules`, `adapters`, or the doc filename for doc commits).
+**Scope:** subsystem name (`voxel`, `render`, `physics`, `net`, `editor`, `core`, `modules`, `adapters`, or the doc filename for doc commits).
 
-Subject: imperative mood, lowercase, no trailing period, ≤ 72 chars.
+**Subject line — short and descriptive, ≤ 150 characters (tweet-sized max).** Imperative mood ("add X", not "added X"), lowercase, no trailing period.
 
-Body: optional. Explains WHY. Wrap at 80 cols.
+> Note: GitHub's `git log --oneline` view truncates around 72 chars. Aim for **≤ 72 chars** when feasible (fits all common UIs); only stretch toward 150 when the extra precision is worth losing the truncation.
+
+**Body — optional but recommended for non-trivial commits.** Explains the *why*, not the *what* (the diff shows what). Wrap at 80 cols. Use bullet lists for multi-step rationale.
+
+**Author + committer:** both fields must use the GitHub noreply format `SETA1609 <123449150+SETA1609@users.noreply.github.com>` per [no-PII policy](../docs/licensing.md). Apply via `--author` flag + `GIT_COMMITTER_NAME` + `GIT_COMMITTER_EMAIL` env vars. Never commit with the global git-config default if it leaks PII.
 
 ## Pull request expectations
 
