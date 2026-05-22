@@ -113,18 +113,31 @@ Source: [SQLite "When To Use"](https://www.sqlite.org/whentouse.html) — explic
 - Godot `editor/plugins/` (per-asset-type editor pattern; specifically the particle editor + tileset editor structures)
 - Luanti `builtin/mainmenu/` (mod-driven content registration UX)
 
-## Scope reduction (realistic for solo v1.0)
+## Scope for v1.0 — Daggerfall slice requires all six tool families
 
-A solo dev cannot ship all 6 tool families at v1.0. Prioritize:
+Per the v1.0 = voxel Daggerfall slice commitment ([`vision.md`](../vision.md) § Shipping strategy), all six tool families land in v1.0. Daggerfall content production needs every one of them; deferring any pushes Daggerfall itself to v1.x, which contradicts the shipping strategy.
 
-1. **Voxel atlas editor** — needed by every game (Phase 12)
-2. **Recipe/item editor** — needed by Atelier + Stardew (Phase 12)
-3. **CSV bulk import** — multiplies productivity (Phase 12)
-4. **Quest editor (basic)** — needed by Daggerfall + Atelier (defer to Phase 12.5 or v1.1)
-5. **Dialog editor** — needed by Daggerfall (defer to v1.1)
-6. **NPC generator** — defer to v1.1 alongside third-person rendering work
+The v1.1–v1.3 derivative games (voxel rogue-like / voxel Stardew / voxel Atelier) reuse these tools unchanged — no new authoring tools needed for the derivatives.
 
-This implies **v1.0 ships the rogue-like target first** (smallest content surface), with Daggerfall / Stardew / Atelier scoped to v1.1+.
+| Tool | Scope | Phase |
+| --- | --- | --- |
+| **Voxel atlas editor** | All games — defines visual + properties per voxel type | Phase 12 |
+| **Recipe / item editor** | Daggerfall + Atelier + Stardew + rogue-like loot | Phase 12 |
+| **CSV bulk import** | All games — multiplies productivity | Phase 12 |
+| **Quest editor** | Daggerfall (heavy), Atelier (medium), Stardew (light); rogue-like minimal | Phase 12 |
+| **Dialog editor** | Daggerfall (heavy), Atelier (medium), Stardew (light) | Phase 12 |
+| **NPC generator** | Daggerfall (thousands of NPCs); other targets use sparse hand-authored sets | Phase 12 |
+
+This makes Phase 12 (Editor & Tooling) the largest phase in absolute work, but the work is necessary regardless — Daggerfall content scale demands it.
+
+### What's deferred to v1.x
+
+Polish features on top of v1.0 tooling, not new tools:
+
+- **NPC generator with third-person rig output** — v1.0 NPCs animate first-person-facing only; rigged third-person bodies (for the v1.x third-person camera mode) defer until then
+- **Quest editor: branching-dialog visualization** — v1.0 ships graph-of-states editing; full visual tree view is polish
+- **Recipe editor: spreadsheet-grid bulk mode** — v1.0 ships per-recipe form + CSV import; an integrated spreadsheet grid is post-v1
+- **Dialog editor: voice-line waveform alignment** — v1.0 ships text-only; voice acting is deferred per [`specs/audio.md`](audio.md) anyway
 
 ## Open decisions
 
