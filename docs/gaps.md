@@ -424,6 +424,8 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 41. **⏰ before Phase 13** **Modkit format spec** — what the auto-generated `modkit/` directory contains: `modkit.toml` schema (engine + ABI versions, registered content IDs, enabled engine modules), `headers/` C ABI signature files, `sample_mod/` template, README contract. Outputs as part of game-project export. See [`engine-vs-game.md` § 3b](engine-vs-game.md)
 42. **⏰ before Phase 14** **Mod-project workflow in editor** — UI flow: open modkit → "New Mod Project" → editor shows parent game content read-only + new mod content writable. Needs design in [`specs/project-manager.md`](specs/project-manager.md) + [`specs/editor.md`](specs/editor.md)
 43. **🔥 Phase 7.5 (Presentation Layer)** — proposed in §2.1.H; **needs to land in [`ROADMAP.md`](ROADMAP.md)** alongside the existing 15 phases. Slots between Phase 7 (ECS) and Phase 8 (Gameplay Modules)
+44. **⏰ before Phase 9** **Edit-policy ownership transitions in multiplayer** — server is authoritative on ownership (plot purchases, quest unlocks, faction membership). Client policy state must update on a server broadcast. Race conditions during simultaneous ownership-change + voxel-edit attempts need defined semantics. See [`specs/scene.md` § Ownership transitions](specs/scene.md)
+45. **⏰ before Phase 13** **`session_only` + `transient` delta serialization rules** — save format must gracefully omit non-persistent region deltas. Detection criteria + recovery on partial-save corruption. See [`specs/scene.md` § Persistence semantics](specs/scene.md)
 
 ---
 
