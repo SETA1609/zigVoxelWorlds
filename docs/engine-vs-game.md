@@ -95,7 +95,7 @@ Two project shapes the editor recognizes. Declared in `project.toml` via `[proje
 Self-contained game. Contains a **core mod** (the vanilla gameplay rules + content) + scripts + assets. Exports to a runnable game.
 
 ```text
-shadowtower/                       # game project root
+voxelrpg_demo/                       # game project root
 ├── project.toml                   # [project] kind = "game"
 ├── core_mod/                      # the vanilla game's content + scripts — structurally a mod
 │   ├── mod.toml                   # declares the core mod's id, version, ABI compat
@@ -109,9 +109,9 @@ shadowtower/                       # game project root
 │   └── README.md                  # what's moddable + linking instructions
 └── export/                        # one-click export output
     └── linux-x86_64/
-        ├── shadowtower            # tiny launcher
+        ├── voxelrpg_demo            # tiny launcher
         ├── libzvox-runtime.so     # per-project tree-shaken
-        ├── shadowtower.pck        # baked assets (incl. core_mod content)
+        ├── voxelrpg_demo.pck        # baked assets (incl. core_mod content)
         ├── modkit/                # bundled OR downloadable separately from Steam
         └── mods/                  # where user-installed mods land
 ```
@@ -122,7 +122,7 @@ Additive content for an existing game. References a parent game; exports a singl
 
 ```text
 better-loot-mod/                   # mod project root
-├── project.toml                   # [project] kind = "mod"; [project.parent_game] id = "shadowtower" min_version = ">=0.1.0"
+├── project.toml                   # [project] kind = "mod"; [project.parent_game] id = "voxelrpg_demo" min_version = ">=0.1.0"
 ├── mod.toml                       # mod manifest (name, version, dependencies, ABI compat)
 ├── data/                          # additive CSV / TOML — new items, recipes, etc.
 ├── scripts/                       # mod-side Zig + C++ (against the published C ABI)
@@ -328,7 +328,7 @@ A project's `project.toml` is the single declaration that determines what ships:
 
 ```toml
 [project]
-name = "shadowtower"
+name = "voxelrpg_demo"
 version = "0.1.0"
 engine_version = "0.1.0"
 
@@ -369,11 +369,11 @@ At export time, the pipeline:
 Result on a player's disk:
 
 ```text
-shadowtower/
-├── shadowtower              # Launcher stub (~MB)
+voxelrpg_demo/
+├── voxelrpg_demo              # Launcher stub (~MB)
 ├── libzvox-runtime.so       # Runtime, tree-shaken — contains only physics_jolt + voxel_core + audio + skills + ...
 ├── libgame.so               # Compiled game scripts
-├── shadowtower.pck          # All assets + data, baked
+├── voxelrpg_demo.pck          # All assets + data, baked
 └── mods/                    # Optional, project-shipped mods
 ```
 

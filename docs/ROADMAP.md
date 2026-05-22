@@ -44,7 +44,7 @@ Borrows: [Godot module system + server pattern](engine-references.md), [Unreal p
 
 Spec: [`specs/voxel.md`](specs/voxel.md). Reference: [Luanti voxel core](engine-references.md).
 
-**Milestone:** walk through a generated 1 km² world.
+**Milestone:** walk through a generated 1 km × 1 km world (X/Z plane), 250 m vertical (Y).
 
 ---
 
@@ -74,7 +74,7 @@ Chunk streaming with hybrid loading, 3+ LOD tiers, origin rebasing, background a
 
 Open decisions: chunk size, origin rebasing strategy ([`gaps.md` § 3](gaps.md)).
 
-**Milestone:** 10 km² seamless world, 8-chunk view distance, target FPS on low-end hardware.
+**Milestone:** 10 km × 10 km seamless world (X/Z plane), 2 km vertical (Y) — 4 km vertical ambitious. 8-chunk view distance, target FPS on low-end hardware.
 
 ---
 

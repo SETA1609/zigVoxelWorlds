@@ -19,21 +19,21 @@ The single declaration that drives the editor, build system, and export pipeline
 ```toml
 # Project identity
 [project]
-name = "shadowtower"                # short id, kebab-case; ends up in exports
-display_name = "Shadow Tower"       # shown in UI
+name = "voxelrpg_demo"                # short id, kebab-case; ends up in exports
+display_name = "VoxelRPG Demo"       # shown in UI
 version = "0.1.0"                   # semver
 engine_compat = ">=0.1.0, <1.0"     # engine version range this project targets
 kind = "game"                       # "game" or "mod"
 description = "A voxel rogue-like dungeon crawler."
 author = "@SETA1609"
-homepage = "https://github.com/SETA1609/shadowtower"
+homepage = "https://github.com/SETA1609/voxelrpg_demo"
 icon = "branding/icon.png"          # GUID-resolved at runtime
 
 # Only for kind = "mod" — declares which game this mod extends
 [project.parent_game]
-id = "shadowtower"                  # parent game's [project] name
+id = "voxelrpg_demo"                  # parent game's [project] name
 min_version = ">=0.1.0"
-modkit_path = "../shadowtower/modkit/"  # relative to project root, or absolute
+modkit_path = "../voxelrpg_demo/modkit/"  # relative to project root, or absolute
                                         # (optional: omit if game is installed system-wide)
 
 # Engine modules enabled for this project (drives per-project tree-shaken export)
@@ -57,25 +57,25 @@ build_options = ["-O", "ReleaseFast"]
 
 # Core mod — for kind = "game" only
 [core_mod]
-id = "shadowtower-core"
+id = "voxelrpg_demo-core"
 path = "core_mod/"                  # relative to project root
 
 # Per-target export options
 [export.linux_x86_64]
 embed_pck = false                   # ship .pck as separate file
 icon = "branding/icon.png"
-launcher_name = "shadowtower"
+launcher_name = "voxelrpg_demo"
 include_modkit = true               # bundle the auto-generated modkit/
 
 [export.windows_x86_64]
 embed_pck = true                    # embed .pck inside the .exe
 icon = "branding/icon.ico"
-launcher_name = "shadowtower.exe"
+launcher_name = "voxelrpg_demo.exe"
 include_modkit = true
 
 [export.android]                    # post-v1.0
 embed_pck = true
-package_id = "com.seta1609.shadowtower"
+package_id = "com.seta1609.voxelrpg_demo"
 
 # Telemetry settings (only meaningful when modules.steam = true or for dedicated servers)
 [telemetry]
@@ -124,13 +124,13 @@ abi_version = "^2.0"                # semver-compatible: any 2.x
 
 # Dependencies — other mods this mod requires / conflicts with
 [mod.dependencies]
-required = ["shadowtower-core >=1.0"]
+required = ["voxelrpg_demo-core >=1.0"]
 optional = ["expanded-economy >=0.3"]
 incompatible = ["loot-overhaul"]
 
 # Load order hint (relative to other mods of the same priority)
 [mod.load_order]
-after = ["shadowtower-core"]
+after = ["voxelrpg_demo-core"]
 before = []
 priority = 100                      # 0 = base game, 100 = default mod, higher = later
 
