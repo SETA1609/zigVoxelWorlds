@@ -98,12 +98,12 @@ Specs already drafted, awaiting implementation:
 - [`specs/particles.md`](specs/particles.md) — GPU particle simulation + emitter authoring
 - [`specs/audio.md`](specs/audio.md) — bus tree + 3D positional + reverb zones + music streaming
 - [`specs/ui.md`](specs/ui.md) — in-game UI engine (anchor layout, widgets, controller nav)
-- [`specs/dialog.md`](specs/dialog.md) — Morrowind-style topic dialog, non-blocking, gamepad-first
+- [`specs/dialog.md`](specs/dialog.md) — Morrowind/Daggerfall-style modal dialog + trade + services (world pauses), gamepad-first
 - [`specs/events.md`](specs/events.md) — pub/sub messaging bus
 - [`specs/lighting.md`](specs/lighting.md) — scene lighting + decals + weather + time-of-day
 - [`specs/materials.md`](specs/materials.md) — PBR materials + shader pipeline cache
 
-**Milestone:** Player walks through a torch-lit cave (lighting); torch flame flickers (particles + lighting); footsteps echo (3D positional audio with reverb zone); rain starts outside (weather + particles); approach an NPC, dialog opens (UI + dialog) but world keeps running and the NPC continues their schedule; cast a fire spell, fireball particles bounce off voxels (collision), sparks light voxel surfaces; gameplay event fires (`spell.cast`), achievement listener catches it.
+**Milestone:** Player walks through a torch-lit cave (lighting); torch flame flickers (particles + lighting); footsteps echo (3D positional audio with reverb zone); rain starts outside (weather + particles); approach an NPC, dialog opens (UI + dialog) and the world pauses (Morrowind-style modal); cast a fire spell, fireball particles bounce off voxels (collision), sparks light voxel surfaces; gameplay event fires (`spell.cast`), achievement listener catches it.
 
 ## Phase 8: Gameplay Modules (Data-Driven)
 
