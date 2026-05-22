@@ -426,45 +426,53 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 
 ## Suggested resolution order
 
-### Week 1–2 — write data-schema docs
+> **Status: most of this list is now landed.** Items below show ✅ where a spec exists. The remaining open work is grouped at the bottom.
 
-1. `project.toml` (#1) — most-referenced thing
-2. `mod.toml` (#2)
-3. `assetdb.toml` (#5)
-4. Save format header + section versioning (#6, partial — just enough for chunk deltas)
+### Week 1–2 — data-schema docs → ✅ all landed in [`specs/data-schemas.md`](specs/data-schemas.md)
 
-### Week 2–3 — architecture micro-decisions
+1. ✅ `project.toml` (#1) — landed in `specs/data-schemas.md`
+2. ✅ `mod.toml` (#2) — landed in `specs/data-schemas.md`
+3. ✅ `assetdb.toml` (#5) — landed in `specs/data-schemas.md`
+4. ⏳ Save format header + section versioning (#6, partial — full spec deferred to Phase 13)
 
-5. `Handle` layout (#7)
-6. Coordinate system (#8)
-7. Voxel data layout (#9)
-8. Chunk size (#10)
-9. Threading model (#12, §2.1.I) — create `docs/specs/threading.md`
-10. C ABI surface skeleton (#13)
-11. Test strategy (#32)
-12. Branching strategy (#29)
-13. ABI versioning policy (#23)
+### Week 2–3 — architecture micro-decisions → ✅ all landed in [`specs/core-types.md`](specs/core-types.md), [`specs/threading.md`](specs/threading.md), [`specs/c-abi.md`](specs/c-abi.md), [`specs/testing.md`](specs/testing.md)
+
+5. ✅ `Handle` layout (#7) — landed in `specs/core-types.md`
+6. ✅ Coordinate system (#8) — landed in `specs/core-types.md`
+7. ✅ Voxel data layout (#9) — landed in `specs/core-types.md`
+8. ✅ Chunk size (#10) — landed in `specs/core-types.md`
+9. ✅ Threading model (#12, §2.1.I) — landed in `specs/threading.md`
+10. ✅ C ABI surface skeleton (#13) — landed in `specs/c-abi.md`
+11. ✅ Test strategy (#32) — landed in `specs/testing.md`
+12. ⏳ Branching strategy (#29) — still open; trivial decision pending commit
+13. ✅ ABI versioning policy (#23) — landed in `specs/c-abi.md`
 
 ### Pre-coding for each phase
 
-14. Camera model (before Phase 1, §2.2.K)
-15. Input mapping (before Phase 1, #14)
-16. Origin rebasing strategy (before Phase 6, #11)
-17. Quest / AI / magic / crafting / inventory data models (before Phase 8, #17–21)
-18. Network transport + authority (before Phase 10, #25–28)
-19. Performance regression CI (before Phase 5, #33)
-20. Save UX + slot management (before Phase 13, #16)
-21. Crash reporting + telemetry consent (before Phase 13–14, #36, #37)
+14. ✅ Camera model (before Phase 1, §2.2.K) — landed in `specs/camera.md` (first-person primary committed)
+15. ⏳ Input mapping (before Phase 1, #14) — still open
+16. ⏳ Origin rebasing strategy (before Phase 6, #11) — still open
+17. ⏳ Quest / AI / magic / crafting / inventory data models (before Phase 8, #17–21) — open per game-system design
+18. ⏳ Network transport + authority (before Phase 10, #25–28) — still open
+19. ⏳ Performance regression CI (before Phase 5, #33) — still open
+20. ✅ Save UX + slot management (before Phase 13, #16) — landed in `specs/save-ux.md`
+21. ⏳ Crash reporting + telemetry consent (before Phase 13–14, #36, #37) — design in `specs/diagnostics.md`; consent UX still open
 
 ### Eventual
 
-22. Trademark filing (before public Steam page)
-23. Steam page assets (before Phase 15)
-24. Release cadence + automation (before Phase 11)
+22. ⏳ Trademark filing (#34) — before public Steam page
+23. ⏳ Steam page assets (#35) — before Phase 15
+24. ⏳ Release cadence + automation (#31) — before Phase 11
 
-### Concurrent — add Phase 7.5: Presentation Layer
+### Concurrent — Phase 7.5: Presentation Layer → ✅ landed in [`ROADMAP.md`](ROADMAP.md)
 
-(§2.1.H) — start designing as Phase 2 lands so animation/VFX/audio/UI specs exist before Phase 8 game logic depends on them.
+Phase 7.5 now in ROADMAP between Phase 7 (ECS) and Phase 8 (Gameplay). All Tier 1 presentation specs (animation, particles, audio, UI, events, lighting, materials, dialog) exist as specs ready for implementation.
+
+### Net status summary
+
+- **~13 items landed as specs** since this list was written
+- **~11 items still open**, most pre-phase blockers concentrated around Phase 8 (gameplay data models) and Phase 10 (multiplayer)
+- The "Save format binary format" (#6) is the biggest remaining Phase-0-blocking item with no spec yet — partial coverage in `specs/save-ux.md` but the binary layout itself isn't pinned down
 
 ---
 
