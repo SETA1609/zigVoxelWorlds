@@ -88,6 +88,23 @@ Spec: [`specs/ecs.md`](specs/ecs.md). Reference: [Hazel + Unreal MassEntity](eng
 
 ---
 
+## Phase 7.5: Presentation Layer
+
+Animation + VFX + audio + UI + events bus + scene lighting all ship together — they share a tick budget, a streaming model, and are driven by gameplay events. Slot before Phase 8 so gameplay modules can emit events that the presentation layer renders.
+
+Specs already drafted, awaiting implementation:
+
+- [`specs/animation.md`](specs/animation.md) — skeletal animation + state machines + IK
+- [`specs/particles.md`](specs/particles.md) — GPU particle simulation + emitter authoring
+- [`specs/audio.md`](specs/audio.md) — bus tree + 3D positional + reverb zones + music streaming
+- [`specs/ui.md`](specs/ui.md) — in-game UI engine (anchor layout, widgets, controller nav)
+- [`specs/dialog.md`](specs/dialog.md) — Morrowind-style topic dialog, non-blocking, gamepad-first
+- [`specs/events.md`](specs/events.md) — pub/sub messaging bus
+- [`specs/lighting.md`](specs/lighting.md) — scene lighting + decals + weather + time-of-day
+- [`specs/materials.md`](specs/materials.md) — PBR materials + shader pipeline cache
+
+**Milestone:** Player walks through a torch-lit cave (lighting); torch flame flickers (particles + lighting); footsteps echo (3D positional audio with reverb zone); rain starts outside (weather + particles); approach an NPC, dialog opens (UI + dialog) but world keeps running and the NPC continues their schedule; cast a fire spell, fireball particles bounce off voxels (collision), sparks light voxel surfaces; gameplay event fires (`spell.cast`), achievement listener catches it.
+
 ## Phase 8: Gameplay Modules (Data-Driven)
 
 Skills, perks, magic, crafting, inventory — each its own module under `modules/`. All data-driven via TOML.

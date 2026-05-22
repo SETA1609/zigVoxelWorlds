@@ -47,6 +47,8 @@ Data: recipes in TOML; stations defined as entity types.
 
 ## Inventory (`modules/inventory/`)
 
+The quickbar (10 slots, universal across all four target games) is owned by the UI layer + lives in [`specs/ui.md`](../specs/ui.md) § Quickbar. Inventory provides the underlying item references; the quickbar slots are stable refs to inventory items.
+
 - Slot count, weight, stack rules, container hierarchy
 - Equipped vs carried (different slot sets per body type)
 - Hot-bar / quick-use mapping

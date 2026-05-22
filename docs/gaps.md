@@ -351,6 +351,7 @@ Confirmed: these don't block v1.0. Listed to keep them tracked.
 - Screenshot mode + free camera (for trailers)
 - FMV / cutscene playback
 - Frame-rate-locked rendering for video capture
+- **TTS screen reader** (post-v1 accessibility upgrade) — Piper-based offline neural TTS, voice packs distributed as free DLC per platform. Particularly impactful because all four target games are text-only / mute. See [`specs/accessibility.md`](specs/accessibility.md) § Post-v1: TTS Screen Reader
 
 ---
 
