@@ -30,15 +30,15 @@ The industry-standard engine layering, from Jason Gregory's *Game Engine Archite
 | 2 | Core systems | allocators, math, containers, asserts, logging, profiling, RNG, handle table | ✅ | [`ARCHITECTURE.md`](ARCHITECTURE.md) high-level layers; Phase 2 stubs (`profile.zig`, `log_sink.zig`, `metrics.zig`); handle table in [`specs/ecs.md`](specs/ecs.md) |
 | 3 | Resource manager | asset loading, caching, lifetime, async I/O, hot-reload, refcounting | ✅ | [`tech-stack.md`](tech-stack.md) § Asset Pipeline + Phase 4; GUID-based assetdb |
 | 4 | Renderer — RHI | graphics API wrapper | ✅ | `RenderServer` + Vulkan backend; `ARCHITECTURE.md` § Server Pattern |
-| 4 | Renderer — scene + culling | scene graph, frustum / occlusion | ⚠ | [`specs/scene.md`](specs/scene.md) covers instancing; **frustum/occlusion culling undesigned** |
+| 4 | Renderer — scene + culling | scene graph, frustum / occlusion | ✅ spec | [`specs/scene.md` § Culling](specs/scene.md) — frustum (CPU) + HZB occlusion (GPU) two-tier model |
 | 4 | Renderer — materials | albedo/normal/rough/metallic descriptors per surface | ✅ spec | [`specs/materials.md`](specs/materials.md) |
 | 4 | Renderer — shader management | runtime registry, `VkPipeline` cache, descriptor-set layouts | ✅ spec | [`specs/materials.md`](specs/materials.md) (covered together) |
 | 4 | Renderer — particles / VFX | GPU emitters, particle update + render | ✅ spec | [`specs/particles.md`](specs/particles.md) |
-| 4 | Renderer — **post-processing** | tonemap, bloom, FXAA, vignette | ❌ | **nowhere** — needs spec |
+| 4 | Renderer — post-processing | tonemap, bloom, FXAA, LUT, vignette | ✅ spec | [`specs/post-processing.md`](specs/post-processing.md) |
 | 4 | Renderer — GUI rendering | in-game UI rasterization | ✅ spec | [`specs/ui.md`](specs/ui.md) + ImGui for editor |
 | 4 | Renderer — lighting model | directional sun, point/spot lights, ambient probes | ✅ spec | [`specs/lighting.md`](specs/lighting.md) |
 | 4 | Renderer — decals | gunshot marks, blood, footprints | ✅ spec | [`specs/lighting.md`](specs/lighting.md) (covered with lighting) |
-| 4 | Renderer — **scene + culling** | scene graph, frustum / occlusion | ⚠ | [`specs/scene.md`](specs/scene.md) covers instancing; **frustum/occlusion culling undesigned** |
+| 4 | Renderer — scene + culling | scene graph, frustum / occlusion | ✅ spec | [`specs/scene.md` § Culling](specs/scene.md) — duplicate of row above, kept for §1.4 cross-reference stability |
 | 5 | Animation | skeletal, morph targets, state machines, blending, IK | ✅ spec | [`specs/animation.md`](specs/animation.md) |
 | 6 | Audio | playback, mixing, 3D positional, bus routing, streaming, DSP | ✅ spec | [`specs/audio.md`](specs/audio.md) |
 | 7 | Physics + collision | broadphase, narrowphase, rigid body, character controller | ✅ spec | [`specs/physics.md`](specs/physics.md) + Phase 5 |
@@ -46,13 +46,13 @@ The industry-standard engine layering, from Jason Gregory's *Game Engine Archite
 | 8 | Gameplay — world | scene/instancing | ✅ spec | [`specs/scene.md`](specs/scene.md) |
 | 8 | Gameplay — scripting | game logic compile + load | ✅ spec | [`engine-vs-game.md`](engine-vs-game.md) § 5 |
 | 8 | Gameplay — events / messaging | pub/sub, signal/slot, observer | ✅ spec | [`specs/events.md`](specs/events.md) |
-| 9 | **AI** | pathfinding, behavior systems (BT/GOAP/utility), perception | ❌ | flagged §3 #19; **no spec doc** — needs `specs/ai.md` |
+| 9 | AI | pathfinding, behavior systems (BT/GOAP/utility), perception | ✅ spec | [`specs/ai.md`](specs/ai.md) — Behavior Trees + NavMesh (Recast/Detour) + perception + AI LOD tiers |
 | 10 | Networking | replication, prediction, server authority | ✅ spec | [`specs/multiplayer.md`](specs/multiplayer.md) + Phase 10 |
 | 11 | VFX broader — weather | rain/snow/wind systems | ✅ spec | [`specs/lighting.md`](specs/lighting.md) (covered together) |
 | 11 | VFX broader — time-of-day | day/night cycle, sun rotation | ✅ spec | [`specs/lighting.md`](specs/lighting.md) (covered together) |
 | 12 | Front-end — UI | HUD, menus, dialog | ✅ spec | [`specs/ui.md`](specs/ui.md) |
-| 12 | Front-end — **transitions** | fade-to-black, scene transitions | ❌ | **nowhere** — needs spec or merge into `specs/ui.md` |
-| 12 | Front-end — **FMV / cutscenes** | video playback, scripted scenes | ❌ | **scope-undecided** — out of v1.0? |
+| 12 | Front-end — transitions | fade-to-black, scene transitions | ✅ spec | [`specs/ui.md` § Animation / transitions](specs/ui.md) — per-property tween + scene fade + modal slide + menu cross-fade |
+| 12 | Front-end — cutscenes | scripted scenes (no video files) | ✅ spec | [`specs/scene.md` § Scripted cutscenes](specs/scene.md) — in-engine only for v1.0; pre-rendered video deferred to v1.x |
 | 13 | Tools / pipeline | asset conditioning, editor, debug, profiler | ✅ | [`specs/editor.md`](specs/editor.md), [`specs/project-manager.md`](specs/project-manager.md), importers, export pipeline |
 | 14 | Save/load | save format, slots, autosave UI | ✅ spec | save model in [`ARCHITECTURE.md`](ARCHITECTURE.md); slot UX in [`specs/save-ux.md`](specs/save-ux.md); binary format still open in §3 #6 |
 | 14 | Replay | record + playback | ✅ | ROADMAP Phase 15 milestone |
@@ -62,20 +62,17 @@ The industry-standard engine layering, from Jason Gregory's *Game Engine Archite
 
 ### Summary
 
-**Aligned + spec'd**: nearly the entire canonical cores set now has either a design doc or implementation plan. The remaining gaps fall into three buckets.
+**Aligned + spec'd**: the entire canonical cores set now has a design doc or implementation plan. The four previously ❌ MISSING items and one ⚠ PARTIAL all landed in this turn.
 
-**Still ❌ MISSING — needs a spec:**
+**Recently resolved (this turn):**
 
-- AI subsystem (§1.9) — utility / BT / GOAP / perception. No spec yet
-- Post-processing pipeline (§1.4) — tonemap / bloom / FXAA / vignette
-- Front-end transitions (§1.12) — fade-to-black, scene transitions
-- FMV / cutscenes (§1.12) — scope-undecided for v1.0
+- ✅ AI subsystem (§1.9) → [`specs/ai.md`](specs/ai.md) — Behavior Trees + NavMesh + perception + AI LOD
+- ✅ Post-processing pipeline (§1.4) → [`specs/post-processing.md`](specs/post-processing.md) — ACES + FXAA + bloom + LUT + vignette, single fused pass
+- ✅ Front-end transitions (§1.12) → [`specs/ui.md` § Animation / transitions](specs/ui.md) — per-property tween + scene fade + modal slide
+- ✅ FMV / cutscenes (§1.12) → [`specs/scene.md` § Scripted cutscenes](specs/scene.md) — in-engine only for v1.0; pre-rendered video out
+- ✅ Scene + frustum/occlusion culling (§1.4) → [`specs/scene.md` § Culling](specs/scene.md) — frustum CPU + HZB occlusion GPU
 
-**Still ⚠ PARTIAL — design exists, depth needed:**
-
-- Scene + frustum/occlusion culling (§1.4) — instancing spec'd; culling design undone
-
-**✅ All other systems have either a working baseline or a current spec stub.** This is a major shift from before — the rendering/presentation/gameplay-foundation layers now have known homes.
+**All canonical cores now have specs.** Remaining work is implementation, not design. The §3 open-decisions list below still has open items (Phase 8 gameplay data models, Phase 10 multiplayer choices, save format) — those are unblocked by phase, not by missing-spec status.
 
 ---
 
