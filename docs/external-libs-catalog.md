@@ -12,20 +12,30 @@ When adding a new external dependency, ask in this order:
 
 ```text
 1. Is there a mature Zig-native package?
-   └─ Yes → use it directly via build.zig.zon (no adapter, no @cImport)
-   └─ No  → continue
+   └─ Yes → continue to 1a
+   └─ No  → continue to 2
+
+   1a. Is this Zig package tightly version-coupled to a C++ neighbor we
+       already wrap in an adapter (e.g. vulkan-zig ↔ VMA/volk/shaderc)?
+       └─ Yes → fold it INTO that adapter sub-repo's build.zig.zon and
+                re-export its API from the adapter's root.zig. Engine
+                gets the Zig types via the adapter; no separate top-level
+                dep. (See: vulkan-stack adapter — §3 row.)
+       └─ No  → use directly via top-level build.zig.zon (§1)
 
 2. Is the library pure C with a simple API (single-header preferred)?
    └─ Yes → @cImport directly, or addCSourceFile in the consuming module
-            (no separate adapters/<name>/ sub-project)
-   └─ No  → continue
+            (no separate adapters/<name>/ sub-project — §2)
+   └─ No  → continue to 3
 
 3. Is the library C++ or complex C, or a vendor SDK?
-   └─ Yes → standalone adapter sub-repo with its own LICENSE
+   └─ Yes → standalone adapter sub-repo with its own LICENSE (§3)
             (consumed by zVoxRealms via build.zig.zon or git submodule)
 ```
 
-The three styles map to the three sections below.
+The three styles map to the three sections below. Step 1a is the
+version-coherence escape hatch — applies rarely, but the Vulkan stack
+is the canonical case.
 
 ---
 
@@ -35,13 +45,14 @@ Pure Zig dependencies pulled in via `build.zig.zon`. No C, no `@cImport`, no ada
 
 | Library | Upstream | Role | Phase |
 | --- | --- | --- | --- |
-| **vulkan-zig** | <https://github.com/Snektron/vulkan-zig> | Comptime-generated Vulkan bindings from `vk.xml` | 1 |
 | **TOML parser** (zig-toml or similar) | <https://github.com/sam701/zig-toml> | TOML parsing for project data, manifests, scenes | 2 |
 | **Math** | hand-written, or zig-gamedev/math | Vectors, matrices, quaternions, SIMD helpers | 1 |
 | **Containers** | `std` | Hash maps, ArrayLists, etc. | always |
 | **Allocators** | `std` | Arena, fixed-buffer, GeneralPurposeAllocator | always |
 
 Rule: if a Zig-native package exists and is well-maintained, **default to it**. Don't write an adapter for libraries that already have idiomatic Zig bindings.
+
+> **Note:** [`vulkan-zig`](https://github.com/Snektron/vulkan-zig) used to be listed here but moved to §3 (folded into the Vulkan-stack adapter). It's still consumed Zig-native — the adapter just re-exports its API. See decision-tree step 1a above for when this consolidation applies.
 
 ---
 
@@ -119,12 +130,11 @@ C++ adapter code follows [`cpp-style.md`](cpp-style.md) — Google C++ Style Gui
 
 | Library | Upstream | License | Adapter license | Role | Phase |
 | --- | --- | --- | --- | --- | --- |
+| **Vulkan-stack** (meta-package — see note below) | bundle: vulkan-zig · VMA · volk · shaderc | mixed permissive | MIT | Vulkan stack: bindings + GPU memory + loader + shader compile. Single sub-repo enforces version coherence | 1 / 4 / 7.5 |
 | **Jolt Physics** | <https://github.com/jrouwe/JoltPhysics> | MIT | MIT | Physics solver, characters, ragdolls | 5 |
-| **VMA (Vulkan Memory Allocator)** | <https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator> | MIT | MIT | GPU memory management | 1 |
 | **Dear ImGui** | <https://github.com/ocornut/imgui> | MIT | MIT | Editor / dev panels | 1 |
 | **ImGuizmo** | <https://github.com/CedricGuillemet/ImGuizmo> | MIT | MIT | 3D transform gizmos in the scene editor | 12 |
 | **imnodes** | <https://github.com/Nelarius/imnodes> | MIT | MIT | Node-graph UI for BT editor + material graph | 12 |
-| **shaderc (over glslang)** | <https://github.com/google/shaderc> · <https://github.com/KhronosGroup/glslang> | Apache-2.0 / BSD-3 | MIT | GLSL → SPIR-V | 4 / 7.5 |
 | **HarfBuzz** | <https://github.com/harfbuzz/harfbuzz> | MIT | MIT | Complex-script text shaping (CJK, Arabic, Devanagari) | 7.5 |
 | **msdfgen** | <https://github.com/Chlumsky/msdfgen> | MIT | MIT | Multi-channel SDF font atlas generation (editor-time) | 7.5 / 12 |
 | **msdf-atlas-gen** | <https://github.com/Chlumsky/msdf-atlas-gen> | MIT | MIT | Atlas packing on top of msdfgen (editor-time only) | 12 |
@@ -142,6 +152,40 @@ C++ adapter code follows [`cpp-style.md`](cpp-style.md) — Google C++ Style Gui
 ⚠ = wrap with Apache 2.0 because of patent-prone tech in the wrapped library.
 
 For the licensing rationale of each adapter sub-repo, see [`licensing.md`](licensing.md) § Adapter sub-repos.
+
+### Note on the Vulkan-stack meta-package
+
+The Vulkan-stack row is structured differently from the other §3 rows because it bundles **one Zig-native package plus three C++ libraries** in a single sub-repo. The sub-repo lives at [`libs/zig-cpp-vulkan-adapter/`](../libs/zig-cpp-vulkan-adapter/) (name retained from initial setup; scope expanded; future rename to `libs/zig-vulkan-stack-adapter/` is a v1.x decision).
+
+What's inside:
+
+| Bundled lib | Role | How it's exposed |
+| --- | --- | --- |
+| **vulkan-zig** ([github.com/Snektron/vulkan-zig](https://github.com/Snektron/vulkan-zig)) — MIT | Zig-native Vulkan bindings generated from `vk.xml` | **Re-exported as-is**: `pub const vk = @import("vulkan");` in the adapter's `root.zig`. Engine gets idiomatic Zig types, error sets, comptime dispatch tables. No C-ABI boundary. |
+| **VMA** — MIT | GPU memory allocator | C++ → extern "C" bridge → idiomatic Zig wrapper. Engine calls Zig API. |
+| **volk** — MIT | Vulkan function loader | C lib; small extern "C" surface; Zig wrapper. |
+| **shaderc** — Apache-2.0 (wraps glslang BSD-3) | GLSL → SPIR-V | C++ → extern "C" bridge → idiomatic Zig wrapper. |
+
+Engine code looks like:
+
+```zig
+const vk_stack = @import("vulkan_stack");
+const vk      = vk_stack.vk;       // re-exported vulkan-zig — full typed API
+const vma     = vk_stack.vma;      // typed Zig wrapper over VMA
+const shaderc = vk_stack.shaderc;
+const volk    = vk_stack.volk;
+
+try cb.beginRenderPass(&info, .@"inline");
+const buf = try vma.createBuffer(allocator, &buf_info, &alloc_info);
+```
+
+Why bundle: VMA's headers embed assumptions about specific Vulkan-1.x function signatures; vulkan-zig's generated bindings come from a specific `vk.xml` snapshot; shaderc emits SPIR-V targeting a specific Vulkan version. **All three must move together** or you get cryptic runtime errors. One sub-repo's `build.zig.zon` enforces atomic version coherence.
+
+What's **not** in the stack:
+
+- **GLFW** — windowing/input, orthogonal to Vulkan. Vulkan can take surfaces from any window source (X11/Wayland/Win32/Android raw handles, SDL, GLFW). Keeping GLFW separate lets us swap it for the planned pure-Zig platform layer ([`tech-stack.md` § Windowing](tech-stack.md#windowing--input)) without touching the Vulkan stack. Stays in §4.
+- **SPIRV-Reflect** — pure C, not Vulkan-version-coupled (it walks SPIR-V binaries against the SPIR-V spec, not against a Vulkan version). Stays in §2.
+- **post-processing / material pipeline / frame graph** — these are engine code, not third-party libs. They live in `src/render/`.
 
 ---
 
@@ -168,11 +212,11 @@ Foundation work that unlocks editor + basic world. Each step builds on prior one
 
 | Order | Adoption | Phase | Purpose |
 | --- | --- | --- | --- |
-| 1 | **vulkan-zig** (§1) + **VMA adapter** (§3) + **GLFW** (§4) | 1 | Open a window, render |
+| 1 | **Vulkan-stack adapter** (§3 — bundles vulkan-zig + VMA + volk + shaderc) + **GLFW** (§4) | 1 | Open a window, render |
 | 2 | **ImGui adapter** (§3) | 1 | Editor scaffolding |
 | 3 | **TOML parser** (§1) | 2 | Load game data + manifests |
 | 4 | **stb_image** (§2) + **cgltf** (§2) + **MikkTSpace** (§2) | 4 | Asset pipeline basics — image + model + tangents |
-| 5 | **shaderc adapter** (§3) + **SPIRV-Reflect** (§2) | 4 / 7.5 | GLSL → SPIR-V + runtime descriptor reflection |
+| 5 | **SPIRV-Reflect** (§2) | 4 / 7.5 | Runtime descriptor reflection (shaderc itself is in the Vulkan-stack adapter from step 1) |
 | 6 | **basis_universal adapter** (§3) + **KTX-Software adapter** (§3) | 4 | Compressed texture transcode + KTX2 container |
 | 7 | **meshoptimizer adapter** (§3) | 4 / 6 | Mesh LOD + vertex cache + meshlets for meshified chunks |
 | 8 | **Jolt adapter** (§3) | 5 | Physics (per [`specs/physics.md`](specs/physics.md)) |
