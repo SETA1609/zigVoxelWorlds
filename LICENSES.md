@@ -2,7 +2,7 @@
 
 This document lists all third-party software bundled with, linked against, or distributed alongside zVoxRealms. Each entry includes the upstream project, license, and the role it plays in the engine. zVoxRealms itself is licensed under Apache License 2.0 — see [`LICENSE`](LICENSE).
 
-> Scope: this file enumerates current dependencies as documented in [`external-libs.md`](docs/external-libs.md) and [`tech-stack.md`](docs/tech-stack.md). Update when adding a new dependency. Each release archive must ship this file in the distribution root so end users have a single place to read attributions.
+> Scope: this file enumerates current dependencies as documented in [`external-libs-catalog.md`](docs/external-libs-catalog.md) and [`tech-stack.md`](docs/tech-stack.md). Update when adding a new dependency. Each release archive must ship this file in the distribution root so end users have a single place to read attributions.
 
 ## How to keep this file current
 

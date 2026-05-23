@@ -26,7 +26,7 @@ Until v1.0, expect breaking changes between **every** minor version. The engine 
   - `tech-stack.md` — Zig-first principle, data layer (TOML + binary + JSON-where-needed), asset pipeline, observability three-tier, scripting, in-engine code editor (bundled Neovim), runtime debug output (libghostty)
   - `project-structure.md` — target on-disk layout
   - `engine-references.md` — concrete patterns to borrow from Hazel, Luanti, Godot, UnrealEngine (paths verified)
-  - `external-libs.md` — three-tier integration catalog (Zig-native / direct cImport / adapter sub-project)
+  - `external-libs-catalog.md` — three-tier integration catalog (Zig-native / direct cImport / adapter sub-project)
   - `engine-vs-game.md` — engine binary vs exported game responsibilities + library categorization
   - `licensing.md` — strategy: Apache 2.0 dev + Steam stable; permissive deps only; adapter sub-repos MIT (Apache for codec-adjacent wrappers); trademark separate; no CLA
   - `cpp-style.md` — Google C++ Style Guide baseline with project deviations (exceptions inside / forbidden at C boundary; RTTI per wrapped lib; C++23)

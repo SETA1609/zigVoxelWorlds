@@ -1,6 +1,6 @@
 # Project Structure
 
-> Scope: [`vision.md`](vision.md) + [`mission.md`](mission.md). Layers: [`ARCHITECTURE.md`](ARCHITECTURE.md). Stack: [`tech-stack.md`](tech-stack.md). Adapters: [`external-libs.md`](external-libs.md). Borrowed patterns: [`engine-references.md`](engine-references.md).
+> Scope: [`vision.md`](vision.md) + [`mission.md`](mission.md). Layers: [`ARCHITECTURE.md`](ARCHITECTURE.md). Stack: [`tech-stack.md`](tech-stack.md). Adapters: [`external-libs-catalog.md`](external-libs-catalog.md). Borrowed patterns: [`engine-references.md`](engine-references.md).
 >
 > ⚠ **Current vs target.** The layout below is the **target** for Phase 0 completion. On disk today, the repo contains only the stub layout (`src/main.zig` + `src/c/` + `src/cpp/` hello-world) inherited from the build template. Closing Phase 0 means creating `src/core/`, `src/servers/`, `src/backends/`, `src/scene/`, `src/platform/`, `modules/`, and the editor / project-manager / importers / export subtrees as documented below — even if most start empty.
 
@@ -25,7 +25,8 @@ The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHI
 │   ├── tech-stack.md
 │   ├── project-structure.md     # This file
 │   ├── engine-vs-game.md
-│   ├── external-libs.md
+│   ├── external-libs-catalog.md  # Committed deps + integration tier
+│   ├── external-libs-survey.md   # Candidate landscape per gap
 │   ├── engine-references.md
 │   ├── licensing.md
 │   ├── cpp-style.md
@@ -117,7 +118,7 @@ The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHI
 │   ├── rogue_tower/             # Endless tower — optional
 │   └── steam/                   # Steamworks + Workshop, only built with -Dsteam=true
 │
-├── adapters/                    # Each C/C++ lib gets its own adapter sub-project (see external-libs.md)
+├── adapters/                    # Each C/C++ lib gets its own adapter sub-project (see external-libs-catalog.md)
 │   ├── vulkan/                  # Volk + VMA wrapper
 │   ├── glfw/
 │   ├── imgui/
@@ -212,7 +213,7 @@ modules/<name>/
 | New importer for a file type | `src/importers/<type>.zig` |
 | New editor panel | `src/editor/panels/<panel>.zig` |
 | New module-specific editor panel | `modules/<name>/editor/<panel>.zig` |
-| Wrapping a new C/C++ lib | `adapters/<name>/` + entry in [`external-libs.md`](external-libs.md) |
+| Wrapping a new C/C++ lib | `adapters/<name>/` + entry in [`external-libs-catalog.md`](external-libs-catalog.md) |
 | New native mod-side system | `<project>/mods/<mod>/plugin/` against the stable C ABI |
 | Project Manager UI | `src/project_manager/` |
 | Export pipeline logic | `src/export/` |

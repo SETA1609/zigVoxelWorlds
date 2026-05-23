@@ -1,7 +1,7 @@
 # zVoxRealms — Vision & High-Level Architecture
 
 > Authoritative scope lives in [`vision.md`](vision.md) + [`mission.md`](mission.md). Vision (long-term): [`vision.md`](vision.md). Mission (current operating statement): [`mission.md`](mission.md). This document describes how the engine is layered to deliver that scope.
-> Concrete code references from private Hazel, luanti-custom, Godot, and UnrealEngine: [`engine-references.md`](engine-references.md). C/C++ libraries that need adapter wrappers: [`external-libs.md`](external-libs.md). Engine-vs-game split + library categorization: [`engine-vs-game.md`](engine-vs-game.md).
+> Concrete code references from private Hazel, luanti-custom, Godot, and UnrealEngine: [`engine-references.md`](engine-references.md). C/C++ libraries that need adapter wrappers: [`external-libs-catalog.md`](external-libs-catalog.md). Engine-vs-game split + library categorization: [`engine-vs-game.md`](engine-vs-game.md).
 
 ## Core Goal
 
@@ -159,4 +159,4 @@ The editor has two specialized panels with distinct backends. Both are engine-on
 - Not console-first — Windows/Linux desktop first, Android later, no console parity
 - Not a general-purpose engine — voxel and these genres only
 
-Next: Read [`ROADMAP.md`](ROADMAP.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`external-libs.md`](external-libs.md), and [`engine-references.md`](engine-references.md).
+Next: Read [`ROADMAP.md`](ROADMAP.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`external-libs-catalog.md`](external-libs-catalog.md), and [`engine-references.md`](engine-references.md).

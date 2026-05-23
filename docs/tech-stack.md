@@ -1,7 +1,7 @@
 # Technology Stack Decisions
 
 > Scope authority: [`vision.md`](vision.md) + [`mission.md`](mission.md). Layering: [`ARCHITECTURE.md`](ARCHITECTURE.md).
-> Adapter libraries: [`external-libs.md`](external-libs.md).
+> Adapter libraries: [`external-libs-catalog.md`](external-libs-catalog.md).
 
 ## Language Strategy
 
@@ -103,7 +103,7 @@ Source files are author-friendly. Runtime files are engine-friendly. The pipelin
 ## Networking
 
 - **Authoritative client-server**, written in Zig.
-- UDP-based transport (custom or via a vetted C library such as ENet / GameNetworkingSockets — decision deferred to Phase 10; see [`external-libs.md`](external-libs.md)).
+- UDP-based transport (custom or via a vetted C library such as ENet / GameNetworkingSockets — decision deferred to Phase 10; see [`external-libs-catalog.md`](external-libs-catalog.md)).
 - Client prediction + server reconciliation, interest management, LAN discovery.
 
 ## Modding

@@ -11,7 +11,7 @@ The roadmap is **vertical-slice-driven**: each phase ends with something runnabl
 Planning, layout, decisions — no engine code beyond hello-world.
 
 - [x] Zig + C + C++ hybrid build system (`src/main.zig` + `src/c/` + `src/cpp/` build via `build.zig`)
-- [x] Planning documents in `docs/` (vision, mission, ARCHITECTURE, tech-stack, project-structure, engine-vs-game, engine-references, external-libs, licensing, cpp-style, guard, gaps, ROADMAP, mvp, plus `specs/*.md`)
+- [x] Planning documents in `docs/` (vision, mission, ARCHITECTURE, tech-stack, project-structure, engine-vs-game, engine-references, external-libs-catalog, external-libs-survey, licensing, cpp-style, guard, gaps, ROADMAP, mvp, plus `specs/*.md`)
 - [ ] On-disk project layout matches [`project-structure.md`](project-structure.md)
 - [ ] Build artifact renamed from `demo` to `zvoxrealms` in `build.zig`
 - [ ] Data-schema docs landed (per [`gaps.md` § 3](gaps.md))
@@ -62,7 +62,7 @@ Spec: [`tech-stack.md` § Asset Pipeline](tech-stack.md#asset-pipeline-godotunre
 
 Built as `modules/physics_jolt/` behind `PhysicsServer`, via the `zig-jolt-adapter` sub-repo. Also wires the real Tracy backend behind `profile.zig`.
 
-Spec: [`specs/physics.md`](specs/physics.md). Adapter: [`external-libs.md` § 3](external-libs.md).
+Spec: [`specs/physics.md`](specs/physics.md). Adapter: [`external-libs-catalog.md` § 3](external-libs-catalog.md).
 
 **Milestone:** player walks, falls, knocks things over; can profile a physics frame in standalone Tracy GUI.
 
@@ -198,4 +198,4 @@ Integration milestone: one town, 3–5 dungeons, one main quest line, classless 
 
 **Current priority:** finish Phase 0 planning (data-schema docs in [`gaps.md` § 3](gaps.md)), then begin Phase 1.
 
-See: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`engine-vs-game.md`](engine-vs-game.md), [`external-libs.md`](external-libs.md), [`engine-references.md`](engine-references.md), [`gaps.md`](gaps.md), [`mvp.md`](mvp.md), [`specs/`](specs/).
+See: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`engine-vs-game.md`](engine-vs-game.md), [`external-libs-catalog.md`](external-libs-catalog.md), [`engine-references.md`](engine-references.md), [`gaps.md`](gaps.md), [`mvp.md`](mvp.md), [`specs/`](specs/).

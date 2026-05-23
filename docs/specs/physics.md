@@ -1,10 +1,10 @@
 # Physics Spec
 
-> What `modules/physics_jolt/` provides. Roadmap: [`ROADMAP.md` § Phase 5](../ROADMAP.md). Adapter notes: [`external-libs.md` §3](../external-libs.md). Open questions: [`gaps.md`](../gaps.md).
+> What `modules/physics_jolt/` provides. Roadmap: [`ROADMAP.md` § Phase 5](../ROADMAP.md). Adapter notes: [`external-libs-catalog.md` §3](../external-libs-catalog.md). Open questions: [`gaps.md`](../gaps.md).
 
 ## Scope
 
-Physics is built as a module behind `PhysicsServer`. The Jolt C++ library is wrapped by a standalone adapter sub-repo (`zig-jolt-adapter`, MIT) — see [`external-libs.md` § 3](../external-libs.md).
+Physics is built as a module behind `PhysicsServer`. The Jolt C++ library is wrapped by a standalone adapter sub-repo (`zig-jolt-adapter`, MIT) — see [`external-libs-catalog.md` § 3](../external-libs-catalog.md).
 
 ## Components
 

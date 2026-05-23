@@ -117,7 +117,7 @@ These need judgment — ask if unclear:
 
 ### Build config files
 - **Yes:** add a new entry to `build.zig.zon` for a dep the owner asked to add
-- **Yes:** update the `external-libs.md` catalog
+- **Yes:** update the `external-libs-catalog.md` catalog
 - **No:** rewrite `build.zig`'s structural logic — owner is learning `build.zig`
 
 ### Hello-world / first-pass skeletons

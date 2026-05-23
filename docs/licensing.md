@@ -70,7 +70,7 @@ For everything else (Jolt, VMA, ImGui, glslang, GLFW, FlatBuffers, Tracy, libgho
 
 **Hard rule — don't fragment licenses within a single repo.** When an adapter exists as a standalone repo, license it however you want (MIT or Apache 2.0 per the table above). When code lives inside the zVoxRealms repo, it's Apache 2.0 — period. Don't mix licenses across subdirectories of one repository; it confuses contributors, breaks SBOM tools, and creates maintenance traps.
 
-**Consume as dependencies, not vendored copies.** zVoxRealms pulls adapter sub-repos via `build.zig.zon`. Inside the engine repo, there is no `adapters/<name>/` directory containing copied adapter source code. The integration catalog in [`external-libs.md`](external-libs.md) lists each adapter sub-repo's location.
+**Consume as dependencies, not vendored copies.** zVoxRealms pulls adapter sub-repos via `build.zig.zon`. Inside the engine repo, there is no `adapters/<name>/` directory containing copied adapter source code. The integration catalog in [`external-libs-catalog.md`](external-libs-catalog.md) lists each adapter sub-repo's location.
 
 **Adapter C++ style:** every adapter sub-repo follows [`cpp-style.md`](cpp-style.md) (Google C++ Style Guide as baseline + project deviations). Each sub-repo ships its own `.clang-format` mirroring the zVoxRealms root.
 

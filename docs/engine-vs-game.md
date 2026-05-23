@@ -1,6 +1,6 @@
 # Engine vs Game: What Ships Where, and Which Libs Go Where
 
-> Scope: [`vision.md`](vision.md) + [`mission.md`](mission.md). Layers: [`ARCHITECTURE.md`](ARCHITECTURE.md). Stack: [`tech-stack.md`](tech-stack.md). Adapters catalog: [`external-libs.md`](external-libs.md). Layout: [`project-structure.md`](project-structure.md). Licensing: [`licensing.md`](licensing.md).
+> Scope: [`vision.md`](vision.md) + [`mission.md`](mission.md). Layers: [`ARCHITECTURE.md`](ARCHITECTURE.md). Stack: [`tech-stack.md`](tech-stack.md). Adapters catalog: [`external-libs-catalog.md`](external-libs-catalog.md). Layout: [`project-structure.md`](project-structure.md). Licensing: [`licensing.md`](licensing.md).
 
 **Licensing summary:** the engine code (everything in `src/`, `modules/`, `adapters/`) is **Apache 2.0**. When a project is exported, the engine code shipped inside `libzvox-runtime.{so,dll}` remains Apache 2.0 (attribution required in the game's distribution). The project's scripts (`libgame.{so,dll}`) and assets (`game.pck`) are the game owner's IP under their own EULA. See [`licensing.md`](licensing.md) for the full strategy.
 
@@ -169,7 +169,7 @@ Open questions to resolve before Phase 14 (add to [`gaps.md` § 3.7](gaps.md)):
 - Mod-DLC interaction — can a free third-party mod require an owned paid DLC? (Yes, common pattern; handle the dependency gracefully)
 - Workshop authoring from inside the engine — modders upload via the editor (`ISteamUGC::CreateItem` + `SubmitItemUpdate`) so they never leave the tool
 
-Steamworks SDK is already a planned adapter (with `-Dsteam=true` gate, per [`external-libs.md`](external-libs.md) § 3). Research stays in scope of that adapter's build.
+Steamworks SDK is already a planned adapter (with `-Dsteam=true` gate, per [`external-libs-catalog.md`](external-libs-catalog.md) § 3). Research stays in scope of that adapter's build.
 
 ---
 
