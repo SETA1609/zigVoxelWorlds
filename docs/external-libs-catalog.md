@@ -82,7 +82,20 @@ Libraries that need an `extern "C"` wrapper layer because:
 
 - Zig's `@cImport` cannot translate C++ classes, templates, or name-mangled symbols
 - The library needs per-lib build flags (RTTI, exceptions, `-std=c++23`)
-- The C ABI boundary is the architectural commitment for mod compatibility ([`engine-vs-game.md`](engine-vs-game.md))
+- The library has unusual lifecycle / threading / build-system requirements that benefit from isolation
+
+### The two C ABIs — don't confuse them
+
+There are two distinct `extern "C"` surfaces in the project. They serve different purposes and shouldn't be conflated:
+
+| ABI | Where it lives | Who calls it | Why C |
+| --- | --- | --- | --- |
+| **(1) Internal adapter bridge** (this §3) | Inside each `libs/zig-*-adapter/` sub-repo (`adapter.h` / `adapter.cpp`) | Only the adapter's own Zig wrapper (`adapter.zig`) | Mechanical: Zig `@cImport` can't translate C++; per-lib build flags |
+| **(2) Public mod/script ABI** ([`specs/c-abi.md`](specs/c-abi.md)) | Engine ↔ mods/scripts boundary | Mods, DLCs, game scripts — anything outside the engine binary | Architectural: stable, versioned, append-only; callable from any language that speaks C |
+
+Engine code (`src/`) **never calls either C ABI directly.** It calls into idiomatic Zig wrappers — the adapter's `adapter.zig` re-exports Zig-shaped types over ABI #1. ABI #2 is *implemented by* the engine, not consumed by it.
+
+So: adapters exist for §3's three reasons above, **not** because of mod compatibility. Mod compatibility is ABI #2's concern, lives in a different doc, and is unrelated to whether any specific library gets an adapter.
 
 **Distribution: each adapter is a standalone sub-repo with its own `LICENSE`.** Consumed by zVoxRealms via `build.zig.zon` or git submodule. **Not** vendored in-tree under `zigVoxelWorlds/adapters/`. (Existing precedent: `libs/zig-cpp-vulkan-adapter/`.)
 
