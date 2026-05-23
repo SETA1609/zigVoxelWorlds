@@ -160,6 +160,122 @@ The single most-asked feature in this kind of system is "the player can leave it
 
 Similarly for crafting stations, fences, decorations — any "build but don't tear down" or "tear down but don't build" use case.
 
+## Scripted cutscenes — in-engine, no video files
+
+Resolves [`gaps.md` § 1.12 FMV / cutscenes](../gaps.md). **Decision: skip pre-rendered video for v1.0.** All cutscenes run in-engine — camera spline + scene events + dialog modal. Reuses systems already spec'd (no new codec dependency, no Theora/AV1, no extra runtime size).
+
+### Why no video files
+
+- Most modern indies skip video cutscenes — the Daggerfall intro was video; today's equivalents (Caves of Qud, Dwarf Fortress Adventure Mode, Cataclysm) do in-engine + text
+- Voxel aesthetic doesn't gain from pre-rendered video — the world IS the visual
+- Adding a video codec is a dependency cost without payoff for the four target games
+- In-engine cutscenes reuse: camera spline animation (this spec) + dialog modal ([`dialog.md`](dialog.md)) + animation events ([`animation.md`](animation.md)) + audio cues ([`audio.md`](audio.md))
+
+Revisit at v1.x if a specific project needs pre-rendered video.
+
+### Cutscene trigger
+
+A cutscene is a TOML-declared sequence of steps tied to a scene trigger volume or scripted event:
+
+```toml
+[scene.royal_archive.cutscenes.opening]
+trigger = "on_first_enter"             # event from the trigger system
+camera_path = "splines/archive_intro"   # spline asset
+duration = 6.5
+
+[[scene.royal_archive.cutscenes.opening.steps]]
+at = 0.0
+action = "camera.attach_to_spline"
+
+[[scene.royal_archive.cutscenes.opening.steps]]
+at = 1.2
+action = "audio.play_oneshot"
+sound = "sfx/ambient/archive_echo"
+
+[[scene.royal_archive.cutscenes.opening.steps]]
+at = 2.5
+action = "dialog.open"
+dialog_id = "archive_warden_greeting"
+
+[[scene.royal_archive.cutscenes.opening.steps]]
+at = 6.5
+action = "camera.return_to_player"
+```
+
+### Step actions (v1.0)
+
+`camera.attach_to_spline` · `camera.return_to_player` · `camera.set_fov` · `dialog.open` · `dialog.close` · `audio.play_oneshot` · `audio.fade_music_to` · `animation.play_on_entity` · `entity.teleport_to` · `world.set_time_of_day` · `ui.fade_to_black` · `ui.fade_from_black`.
+
+### Skippable
+
+All cutscenes can be skipped (player presses any input). Skip jumps to the cutscene's `on_skip` state — usually `camera.return_to_player` + advance any quest flags the cutscene would have set. Accessibility per [`accessibility.md`](accessibility.md) — never trap the player in a non-skippable scene.
+
+### Multiplayer
+
+Cutscenes do **not** pause the world on dedicated servers ([`multiplayer.md`](multiplayer.md)). In co-op, a cutscene that triggers for one player runs locally for that player only — the camera spline + dialog modal are client-side. Other players keep playing. This is the Skyrim co-op-mod convention; trying to sync cutscenes across players in real time has shipped poorly in most games.
+
+Single-player: world pauses during cutscene per the [`dialog.md`](dialog.md) modal convention if a dialog step is open; otherwise world keeps simulating in the background but player input is captured.
+
+## Culling — frustum (CPU) + HZB occlusion (GPU)
+
+Resolves [`gaps.md` § 1.4 scene + frustum/occlusion culling](../gaps.md). Critical for Daggerfall scale — a 10 km × 10 km world with thousands of chunks means most are never visible. The renderer must not waste work on them.
+
+### Two-tier model
+
+| Tier | Stage | Cost | What it catches |
+| --- | --- | --- | --- |
+| **Frustum culling** | CPU, per chunk + per entity | < 0.2 ms for thousands of items | Anything outside the camera's view cone |
+| **HZB occlusion culling** | GPU, after frustum + depth pre-pass | ~0.3 ms compute | Anything inside the frustum but hidden behind closer geometry |
+
+Both are necessary. Frustum alone leaves "draws everything inside the frustum even behind a mountain"; HZB alone wastes work on already-out-of-frustum chunks.
+
+### Frustum culling
+
+- Each chunk has a cached AABB (8 corners, recomputed only on edit)
+- Each entity has an AABB on its transform component
+- Per frame: extract 6 frustum planes from the view+projection matrix; test each AABB against all 6 planes
+- AABB fully outside any plane → cull
+- AABB intersecting → render (over-conservative is fine; HZB catches the rest)
+
+Standard algorithm. Implementation in `src/render/cull/frustum.zig` during Phase 6.
+
+### HZB occlusion culling
+
+The voxel-world-specific perf win. Without it, Daggerfall renders every chunk in the frustum even when a mountain hides 90% of them.
+
+**Hierarchical Z-Buffer (HZB):** build a depth pyramid from last frame's (or this frame's depth pre-pass) Z buffer. Each mip level holds the **maximum** depth of its 2×2 source texels. To test an AABB for occlusion: project to screen space, find the appropriate mip level, sample, compare AABB's nearest depth against the HZB's farthest at that pixel — if AABB is fully behind, cull it.
+
+**Frame flow:**
+
+1. Frustum-cull (CPU) → submit depth pre-pass for survivors
+2. Generate HZB pyramid from depth pre-pass (compute, ~0.1 ms)
+3. For each survivor, do HZB test → cull the hidden ones
+4. Submit color pass for the un-culled remainder
+
+The first frame after a camera jump (teleport, scene change) skips HZB since the previous frame's depth isn't relevant — falls back to frustum-only for one frame. Visible-pop is negligible.
+
+### Per-LOD interaction
+
+HZB tests use the LOD-selected representation. A chunk far enough to be at LOD3 gets its LOD3 AABB tested. Meshified static chunks (per [`voxel.md`](voxel.md)) test the same way — AABB is AABB; the cull is representation-agnostic.
+
+### Cost budget
+
+Frustum cull: < 0.2 ms at 8-chunk view distance + 200 active entities.
+HZB cull: < 0.3 ms including pyramid build.
+
+Together < 0.5 ms — well under the per-frame budget. The savings (skipping rasterization of fully-occluded chunks) pays this back many times over on dense scenes.
+
+### Reference patterns
+
+| Engine | Where | What to adapt |
+| --- | --- | --- |
+| **Godot — frustum** ✅ | `$REFS/godot/scene/3d/visual_instance_3d.cpp` + `$REFS/godot/servers/rendering/renderer_scene_cull.cpp` | Frustum plane extraction + AABB-vs-plane test |
+| **Godot — portal occlusion** | `$REFS/godot/scene/3d/occluder_instance_3d.cpp` | Indoor portal-based occlusion — good for cities, less for open voxel terrain |
+| **Unreal — HZB** | `$REFS/UnrealEngine/Engine/Source/Runtime/Renderer/Private/HZB.cpp` + `HZBOcclusion.cpp` (verify paths during Phase 6) | The HZB pyramid build + occlusion-query compute. Industry-leading. Study the algorithm, **close the source**, implement in Zig |
+| **Luanti** | `$REFS/luanti-custom/src/client/clientmap.cpp` (chunk-distance + frustum only) | Basic — no occlusion. Useful as a "minimum viable" reference |
+
+Adaptation rule per [`engine-references.md` § Legal](../engine-references.md): Unreal HZB code is **especially** lawsuit-risk per [`feedback_reference_engine_no_verbatim.md`](../../memory/feedback_reference_engine_no_verbatim.md). Read the paper that backs it (Niessner et al. "Real-time Rendering of Massive Unbounded Voxel Worlds" + the original HZB paper by Greene/Kass/Miller 1993) for the algorithm, then implement from first principles.
+
 ## Reference patterns
 
 - Godot scene-instancing pattern (user-facing UX) — see [`engine-references.md` → Godot](../engine-references.md)

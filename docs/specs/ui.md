@@ -157,9 +157,64 @@ Activation fires `event quickbar.activated { slot, item_id }` (per [`specs/event
 
 ## Animation / transitions
 
-- Per-property tweens (position, scale, opacity, color) with duration + easing
-- Triggered by state changes (`.hover`, `.focused`) or scripted
-- Spring physics for "bouncy" feedback (deferred to Phase 7.5 polish)
+Resolves [`gaps.md` § 1.12 front-end transitions](../gaps.md) — scene fade-to-black, modal slide-in, menu cross-fade. Folded into the UI engine rather than its own spec because the surface is small and the implementation reuses the widget tree.
+
+### Per-property tween
+
+Animate any widget property (position, scale, opacity, color, anchor) over time:
+
+```toml
+[tween.menu_fade_in]
+target = "menu.root"
+property = "modulate.a"      # alpha channel of the modulate color
+from = 0.0
+to = 1.0
+duration = 0.3               # seconds
+easing = "ease_out_cubic"
+```
+
+### Easing curves (v1.0 set)
+
+`linear` · `ease_in_quad` · `ease_out_quad` · `ease_in_out_quad` · `ease_in_cubic` · `ease_out_cubic` · `ease_in_out_cubic` · `ease_out_back` (subtle overshoot for snap-in) · `spring` (deferred to Phase 7.5 polish — needs mass/stiffness/damping params).
+
+### Scene transitions
+
+Built on the per-property tween:
+
+| Transition | Implementation |
+| --- | --- |
+| **Fade-to-black** | Full-screen black `Panel` widget; opacity tween 0 → 1; load new scene under cover; opacity tween 1 → 0 |
+| **Cross-fade** | Two scene root nodes alive simultaneously; old `modulate.a` 1 → 0 while new 0 → 1 |
+| **Slide** (for in-game scene change without world break) | Translate offset tween on the world camera target while a hold-frame screenshot is composited on top |
+
+Scene transitions are orchestrated by a `SceneTransitionManager` (one instance per running game) that owns the in-flight tween + the load coroutine.
+
+### Modal transitions
+
+Dialog / trade / inventory open + close per [`dialog.md`](dialog.md). Default style: **slide-up from bottom** with a 0.2 s `ease_out_cubic`. Configurable per-modal in TOML (`enter_anim = "fade"` / `"slide_left"` / `"slide_up"` / etc.).
+
+### Menu transitions
+
+Main menu → settings → back. Cross-fade between menu screens at 0.15 s. Focus restores to the originating button on back.
+
+### Triggers
+
+- State-change driven: `.hover`, `.focused`, `.pressed`, `.disabled` automatically tween declared style deltas
+- Scripted: game code or BT action fires `ui.tween_start { tween_id }` per [`events.md`](events.md)
+
+### Cost budget
+
+UI tweens are CPU-cheap (single-property lerps); total UI tween cost target < 0.05 ms at 60 FPS even with 50 active tweens. No GPU dispatch — UI rendering reads the tweened values directly.
+
+### Reference patterns
+
+| Engine | Where | What to adapt |
+| --- | --- | --- |
+| **Godot — Tween** ✅ best fit | `$REFS/godot/scene/animation/tween.cpp` | Per-property tween model, easing-curve enum, the `interpolate_property` API surface |
+| **Unreal — UMG animations** | `$REFS/UnrealEngine/Engine/Source/Runtime/UMG/Public/Animation/` | Track-based animation per widget. Heavier than needed; study the data model only |
+| Stardew Valley (game) | n/a — game-side | Fade-to-black between locations is the canonical "indie-correct" simplicity |
+
+Adaptation rule per [`engine-references.md` § Legal](../engine-references.md): study Godot's Tween API surface, close the source, implement in Zig.
 
 ## Open decisions
 
