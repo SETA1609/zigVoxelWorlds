@@ -211,16 +211,25 @@ If the engine doesn't provide **content-authoring tools** (procedural NPC genera
 
 #### §2.2.A — CI / cross-compile / release automation
 
-`build.zig` exists; no CI. Need:
+`build.zig` exists; baseline CI landed.
 
-- GitHub Actions for lint (`zig fmt` + `clang-format` check), `zig build test`, build matrix (Linux + Windows now, Android later)
-- Per-PR pipeline runs before merge
-- Tagged releases auto-build + upload artifacts to GitHub Releases
-- Steam upload automation
-- Versioning policy (pre-1.0 semver — `0.x.y` where x = phase number?)
-- Update channel mechanism (dev / beta / stable)
+**Resolved baseline** (✅ in `.github/workflows/build.yml`):
 
-Set up in Phase 0.5 or when first runnable code lands.
+- ✅ GitHub Actions lint job — `zig fmt --check` + `clang-format --dry-run -Werror`
+- ✅ Build matrix — Linux + Windows (macOS deferred per [`mission.md`](mission.md))
+- ✅ Submodule fetch via SSH→HTTPS URL rewrite trick (per `.gitmodules` using SSH URLs)
+- ✅ Per-PR pipeline runs before merge — required-status candidate
+- ✅ Concurrency block cancels stale runs on force-push
+- ✅ Zig artifact cache keyed on (`.gitmodules`, `build.zig`, `build.zig.zon`)
+
+**Still open** (lands as phases approach):
+
+- ⏳ `zig build test` step — needs `build.zig` to declare a test step (Phase 1 follow-up)
+- ⏳ Tagged-release auto-build + GitHub Releases upload (Phase 13 export pipeline)
+- ⏳ Steam upload automation (Phase 14 Steamworks integration)
+- ⏳ Versioning policy (pre-1.0 semver — `0.x.y` where x = phase number?) — decide before first tagged release
+- ⏳ Update channel mechanism (dev / beta / stable) — Phase 14+
+- ⏳ Android cross-compile to the matrix (post-v1.0)
 
 #### §2.2.B — Localization (i18n / l10n) → ✅ spec'd in [`specs/localization.md`](specs/localization.md) — gettext `.po` canonical
 
