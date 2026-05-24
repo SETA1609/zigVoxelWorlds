@@ -1,6 +1,8 @@
 # Platform Adapter Spec
 
-> The stable Zig API for window, events, action-mapped input, time, file I/O, and Vulkan-surface creation. Lives as a sub-repo at `libs/zig-cpp-platform-stack-adapter/`. **Single Zig package, multiple backends as source files** — backend selected at build time per target.
+> The stable Zig API for window, events, action-mapped input, time, file I/O, and native window handle exposure. Lives as a sub-repo at `libs/zig-cpp-platform-stack-adapter/`. **Single Zig package, multiple backends as source files** — backend selected at build time per target.
+>
+> This adapter has **no Vulkan dependency.** Surface creation lives in the [`zig-cpp-vulkan-stack-adapter`](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) and consumes the `NativeWindowHandle` type defined here. The two adapters are decoupled — `vulkan-stack → platform-stack` is a one-way data dep, not a cycle.
 >
 > Closes [`gaps.md` § 3 #14 input mapping](../gaps.md). Catalog row: [`external-libs-catalog.md` § 3](../external-libs-catalog.md) (Platform-stack meta-package). Migration design from [`tech-stack.md` § Windowing & Input](../tech-stack.md#windowing--input). Pattern precedent: SDL, Godot's `DisplayServer`, Unreal's `IPlatformApplication`.
 
@@ -17,6 +19,7 @@ Engine code looks identical across the migration:
 
 ```zig
 const platform = @import("platform");
+const vk_stack = @import("vulkan_stack");
 
 const window = try platform.Window.create(.{
     .title = "zVoxRealms",
@@ -33,7 +36,10 @@ while (platform.nextEvent()) |ev| switch (ev) {
 
 if (input.actionPressed(.jump)) player.jump();
 
-const surface = try platform.createVulkanSurface(window, vk_instance);
+// Surface creation: platform exposes the raw handle; vulkan-stack creates the surface.
+// Platform layer has no Vulkan dep; engine bridges in one line.
+const handle  = platform.nativeHandle(window);
+const surface = try vk_stack.createSurface(vk_instance, handle);
 ```
 
 ## Sub-repo layout — single library, backends as files
@@ -45,12 +51,12 @@ libs/zig-cpp-platform-stack-adapter/
 ├── LICENSE                          # MIT
 ├── README.md
 ├── build.zig                        # per-target backend selection (see below)
-├── build.zig.zon                    # vulkan-zig dep (for surface type), GLFW vendored
+├── build.zig.zon                    # zero Vulkan deps; GLFW vendored under vendor/glfw/
 ├── src/
 │   ├── root.zig                     # public API — re-exports from `backend` module
-│   ├── common.zig                   # shared types: Event, KeyCode, WindowOptions, ActionId
+│   ├── common.zig                   # shared types: Event, KeyCode, WindowOptions, ActionId, NativeWindowHandle
 │   ├── action_input.zig             # action-mapping layer (platform-agnostic)
-│   ├── vulkan_surface.zig           # surface-creation dispatch (target-conditional)
+│   ├── native_handle.zig            # per-backend native handle extraction
 │   ├── backend/
 │   │   ├── glfw.zig                 # v0 backend — single file; GLFW handles per-OS internally
 │   │   └── native/                  # v1.x backend — file per OS
@@ -123,9 +129,9 @@ The compiler walks the import graph from the chosen backend root. Files for othe
 
 | Export target | Files compiled into the export | Files NOT touched |
 | --- | --- | --- |
-| `--target x86_64-linux-gnu -Dplatform_backend=native` | `root.zig` + `common.zig` + `action_input.zig` + `vulkan_surface.zig` (linux branch) + `backend/native/linux.zig` + `linux_x11.zig` + `linux_wayland.zig` | All Win32/macOS/Android backend files; all GLFW vendor source |
-| `--target x86_64-windows-gnu -Dplatform_backend=native` | `root.zig` + `common.zig` + `action_input.zig` + `vulkan_surface.zig` (win32 branch) + `backend/native/windows.zig` | All Linux/macOS/Android backend files; all GLFW vendor source |
-| `--target x86_64-linux-gnu -Dplatform_backend=glfw` | `root.zig` + `common.zig` + `action_input.zig` + `vulkan_surface.zig` (glfw branch) + `backend/glfw.zig` + `vendor/glfw/` (Linux subset only) | All native backend files; GLFW's Windows/macOS sources (GLFW's own CMake gates them) |
+| `--target x86_64-linux-gnu -Dplatform_backend=native` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (linux branch) + `backend/native/linux.zig` + `linux_x11.zig` + `linux_wayland.zig` | All Win32/macOS/Android backend files; all GLFW vendor source |
+| `--target x86_64-windows-gnu -Dplatform_backend=native` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (win32 branch) + `backend/native/windows.zig` | All Linux/macOS/Android backend files; all GLFW vendor source |
+| `--target x86_64-linux-gnu -Dplatform_backend=glfw` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (glfw branch) + `backend/glfw.zig` + `vendor/glfw/` (Linux subset only) | All native backend files; GLFW's Windows/macOS sources (GLFW's own CMake gates them) |
 
 Verification rule: `nm libzvox-runtime.so | grep -i 'win32\|wayland\|cocoa'` shows only the symbols for the target platform.
 
@@ -179,20 +185,51 @@ pub const WindowHint = enum { glfw_resizable, ... };
 
 The native backend reads `Event` from a queue; the GLFW backend reads `Event` from a queue. Both populate `Event` from their own sources internally.
 
-### Rule 2 — Vulkan surface creation is the one platform-coupled escape hatch
+### Rule 2 — Expose native window handles; the renderer creates surfaces
 
-Each backend implements `createVulkanSurface(window, instance) → vk.SurfaceKHR` against its native window handle:
+The platform adapter has **no Vulkan dependency.** It exposes raw OS window handles as a typed `NativeWindowHandle` union; the renderer (which already depends on the Vulkan-stack adapter) is the one that calls `vk*Surface*KHR` to convert that handle into a `vk.SurfaceKHR`.
 
-| Backend | Implementation |
+This keeps the two adapters genuinely independent: a headless server, a config-editor tool, or any non-rendering binary can pull in platform-stack without dragging vulkan-zig along.
+
+Per-backend, the adapter implements `nativeHandle(window) → NativeWindowHandle`:
+
+| Backend | What `nativeHandle()` returns |
 | --- | --- |
-| GLFW | `glfwCreateWindowSurface(instance, glfw_handle, ...)` |
-| X11 | `vkCreateXlibSurfaceKHR(instance, ...)` |
-| Wayland | `vkCreateWaylandSurfaceKHR(instance, ...)` |
-| Win32 | `vkCreateWin32SurfaceKHR(instance, ...)` |
-| Android | `vkCreateAndroidSurfaceKHR(instance, ...)` |
-| macOS | `vkCreateMetalSurfaceEXT` + MoltenVK (deferred, not v1.0 target per `mission.md`) |
+| GLFW (Linux X11) | `.x11 { display = glfwGetX11Display(), window = glfwGetX11Window(w) }` |
+| GLFW (Linux Wayland) | `.wayland { display = glfwGetWaylandDisplay(), surface = glfwGetWaylandWindow(w) }` |
+| GLFW (Windows) | `.win32 { hinstance = GetModuleHandleW(null), hwnd = glfwGetWin32Window(w) }` |
+| Native X11 | `.x11 { display, window }` directly from XCB/Xlib state |
+| Native Wayland | `.wayland { display, surface }` directly from wl_* state |
+| Native Win32 | `.win32 { hinstance, hwnd }` directly from CreateWindowExW state |
+| Native Android | `.android { window = ANativeWindow* }` |
+| Native macOS | `.cocoa { layer = CAMetalLayer* }` (deferred, not v1.0) |
 
-Engine renderer code calls only `platform.createVulkanSurface(window, instance)`. Backend chooses the right `vk*Surface*KHR` call. The vk.zig type comes from `vulkan-zig` (via the Vulkan-stack adapter — see [`external-libs-catalog.md` § 3](../external-libs-catalog.md)).
+The renderer side then has one function (in `zig-cpp-vulkan-stack-adapter`):
+
+```zig
+pub fn createSurface(
+    instance: vk.Instance,
+    handle: NativeWindowHandle,    // imported from platform-stack
+) !vk.SurfaceKHR {
+    return switch (handle) {
+        .x11     => |h| vk.createXlibSurfaceKHR(instance, ...),
+        .wayland => |h| vk.createWaylandSurfaceKHR(instance, ...),
+        .win32   => |h| vk.createWin32SurfaceKHR(instance, ...),
+        .android => |h| vk.createAndroidSurfaceKHR(instance, ...),
+        .cocoa   => |h| vk.createMetalSurfaceEXT(instance, ...),
+    };
+}
+```
+
+Engine bridges in one line:
+
+```zig
+const surface = try vk_stack.createSurface(vk_instance, platform.nativeHandle(window));
+```
+
+The `NativeWindowHandle` type lives in **platform-stack** (it's the OS's concept of a window handle). Vulkan-stack imports the type — that's a one-way data dependency (no behavior, just structs of raw pointers). The reverse direction (platform-stack depending on vulkan-zig) is what we deliberately avoid.
+
+Reference precedent: SDL exposes `SDL_GetWindowWMInfo` returning a per-platform native handle struct; the renderer (Vulkan, OpenGL, D3D11, Metal) consumes it. SDL itself has no Vulkan dep. Godot's `DisplayServer::window_get_native_handle` is the same pattern. Unreal's `IPlatformApplication` exposes window handles; `FVulkanRHI` consumes them.
 
 ### Rule 3 — Pick engine-canonical behavior; document divergence honestly
 
@@ -446,17 +483,27 @@ pub fn openWithSystemDefault(path: []const u8) !void;
                                         // "xdg-open" / "start" / "open"
 ```
 
-### Vulkan surface
+### Native window handle (for renderer surface creation)
 
 ```zig
+pub const NativeWindowHandle = union(enum) {
+    x11:     struct { display: *anyopaque, window: u64 },
+    wayland: struct { display: *anyopaque, surface: *anyopaque },
+    win32:   struct { hinstance: *anyopaque, hwnd: *anyopaque },
+    android: struct { window: *anyopaque },
+    cocoa:   struct { layer: *anyopaque },     // CAMetalLayer* — deferred post-v1.0
+};
+
+pub fn nativeHandle(window: *Window) NativeWindowHandle;
 pub fn requiredVulkanInstanceExtensions() []const [*:0]const u8;
-pub fn createVulkanSurface(
-    window: *Window,
-    instance: vk.Instance,
-) !vk.SurfaceKHR;
+                                         // ↑ just C-string array — no Vulkan TYPES involved
 ```
 
-The `vk` type comes from the Vulkan-stack adapter; platform adapter declares it as an `extern struct` so it can construct surfaces without a hard import of `vulkan-zig`. Saves the platform adapter from needing the Vulkan stack at build time when `vulkan_compatible = false` (e.g. a headless test build).
+`requiredVulkanInstanceExtensions()` returns the names of `VK_KHR_*_surface` extensions the renderer must enable on `vk.Instance` creation (e.g. `VK_KHR_xlib_surface` on X11). It returns C strings — no Vulkan type dependency.
+
+`nativeHandle()` exposes raw OS window handles as a typed union. The renderer (`zig-cpp-vulkan-stack-adapter`) imports the `NativeWindowHandle` type and consumes it via its own `createSurface(instance, handle)` function.
+
+**The platform adapter has zero Vulkan dependency.** A headless server, a config-editor tool, or any non-rendering binary can use this adapter without dragging vulkan-zig along.
 
 ## Integration with other subsystems
 
@@ -471,7 +518,7 @@ The `vk` type comes from the Vulkan-stack adapter; platform adapter declares it 
 | [`specs/multiplayer.md`](multiplayer.md) | Platform adapter is single-machine only; network input replication is engine-layer. Injected actions are local-only — never replicated to authoritative server |
 | [`specs/testing.md`](testing.md) | Integration tests drive the player via `injectAction` — same code path as real input. Tests run against both backends per design rule 4 |
 | [`specs/audio.md`](audio.md) | Audio backend is miniaudio — independent of platform adapter (see catalog § Note on Platform-stack exclusions) |
-| Renderer (Vulkan-stack adapter) | `createVulkanSurface(window, instance)` is the single integration point |
+| Renderer (Vulkan-stack adapter) | Engine calls `platform.nativeHandle(window)` and passes the result to `vk_stack.createSurface(instance, handle)`. Platform adapter has no Vulkan dep. `NativeWindowHandle` type is defined here and imported by vulkan-stack (one-way data dep) |
 
 ## Reference patterns
 
@@ -533,5 +580,7 @@ Phase 1 — adopt the Platform-stack adapter alongside the Vulkan-stack adapter.
 - Context stack: push `dialog` → gameplay's `attack_primary` is masked → pop → gameplay's binding is live again
 - Synthetic injection: `injectAction(.jump, true, 1.0)` triggers the same code path as a real spacebar press; verified by integration test
 - Axis-binding modifiers: deadzone + smooth + invert applied correctly on gamepad sticks
+- Native handle exposure: `platform.nativeHandle(window)` returns a typed `NativeWindowHandle`; the renderer's `vk_stack.createSurface(instance, handle)` consumes it without the platform adapter linking vulkan-zig
+- Build verification: `nm` on a Linux export shows no Win32/macOS/Android symbols, and no `vk*` symbols emitted from the platform adapter itself (only from vulkan-stack)
 
 Native backend (v1.x) ships after v1.0 voxel-Daggerfall release per [`vision.md` § Shipping strategy](../vision.md). Same verifications must pass against `-Dplatform_backend=native` in CI before the v1.x → v2.0 sub-repo bump lands in the engine.
