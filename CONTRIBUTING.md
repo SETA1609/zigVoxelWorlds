@@ -38,7 +38,7 @@ zVoxRealms is **Apache License 2.0** — see [`LICENSE`](LICENSE) and [`docs/lic
 
 Optional but appreciated: `Signed-off-by:` trailers in commits (DCO-style). Not yet enforced.
 
-**Adapter sub-repos** (e.g. `libs/zig-cpp-vulkan-adapter/`) use their own license — typically MIT. See each sub-repo's `LICENSE` and [`docs/licensing.md`](docs/licensing.md) § Adapter sub-repos.
+**Adapter sub-repos** (e.g. `libs/zig-cpp-vulkan-stack-adapter/`) use their own license — typically MIT. See each sub-repo's `LICENSE` and [`docs/licensing.md`](docs/licensing.md) § Adapter sub-repos.
 
 **Forbidden dependencies:** GPL, LGPL, AGPL, SSPL, Commons Clause, "non-commercial only" licenses. PRs introducing these will be declined. See [`docs/external-libs-catalog.md`](docs/external-libs-catalog.md) § 6.
 

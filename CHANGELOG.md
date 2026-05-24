@@ -35,7 +35,7 @@ Until v1.0, expect breaking changes between **every** minor version. The engine 
   - `mvp.md` — MVP definition (Phase 1 + Phase 2)
 - Repo-root meta files: `CONTRIBUTING.md`, `CHANGELOG.md`, `SECURITY.md`
 - `.clang-format` at repo root + adapter sub-repo
-- MIT `LICENSE` for `libs/zig-cpp-vulkan-adapter/`
+- MIT `LICENSE` for `libs/zig-cpp-vulkan-stack-adapter/`
 
 #### Decisions made (no code yet)
 

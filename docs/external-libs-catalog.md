@@ -108,7 +108,7 @@ Engine code (`src/`) **never calls either C ABI directly.** It calls into idioma
 
 So: adapters exist for §3's three reasons above, **not** because of mod compatibility. Mod compatibility is ABI #2's concern, lives in a different doc, and is unrelated to whether any specific library gets an adapter.
 
-**Distribution: each adapter is a standalone sub-repo with its own `LICENSE`.** Consumed by zVoxRealms via `build.zig.zon` or git submodule. **Not** vendored in-tree under `zigVoxelWorlds/adapters/`. (Existing precedent: `libs/zig-cpp-vulkan-adapter/`.)
+**Distribution: each adapter is a standalone sub-repo with its own `LICENSE`.** Consumed by zVoxRealms via `build.zig.zon` or git submodule. **Not** vendored in-tree under `zigVoxelWorlds/adapters/`. (Existing precedent: `libs/zig-cpp-vulkan-stack-adapter/`.)
 
 Each adapter sub-repo contains:
 
@@ -156,7 +156,7 @@ For the licensing rationale of each adapter sub-repo, see [`licensing.md`](licen
 
 ### Note on the Vulkan-stack meta-package
 
-The Vulkan-stack row is structured differently from the other §3 rows because it bundles **one Zig-native package plus three C++ libraries** in a single sub-repo. The sub-repo lives at [`libs/zig-cpp-vulkan-adapter/`](../libs/zig-cpp-vulkan-adapter/) (name retained from initial setup; scope expanded; future rename to `libs/zig-vulkan-stack-adapter/` is a v1.x decision).
+The Vulkan-stack row is structured differently from the other §3 rows because it bundles **one Zig-native package plus three C++ libraries** in a single sub-repo. The sub-repo lives at [`libs/zig-cpp-vulkan-stack-adapter/`](../libs/zig-cpp-vulkan-stack-adapter/) and follows the project-wide naming convention `zig-cpp-<name>-stack-adapter` for meta-package adapters.
 
 What's inside:
 
@@ -190,7 +190,7 @@ What's **not** in the stack:
 
 ### Note on the Platform-stack meta-package
 
-Second instance of the meta-package pattern (the first is the Vulkan-stack above). The sub-repo lives at `libs/zig-platform-adapter/`.
+Second instance of the meta-package pattern (the first is the Vulkan-stack above). The sub-repo lives at `libs/zig-cpp-platform-stack-adapter/`.
 
 The platform adapter exposes a stable Zig API to the engine (window, events, action-mapped input, time, file I/O, Vulkan-surface creation). The implementation backend is internal to the adapter and **can change between major versions of the sub-repo without engine source changes**.
 
@@ -222,7 +222,7 @@ if (input.actionPressed(.jump)) player.jump();
 const surface = try platform.createVulkanSurface(window, vk_instance);
 ```
 
-Migration trigger is bumping `libs/zig-platform-adapter` from v1.0 to v2.0 in `build.zig.zon`. Engine commits track no part of the swap. The same Zig API stays at the boundary — only the implementation under the hood changes.
+Migration trigger is bumping `libs/zig-cpp-platform-stack-adapter` from v1.0 to v2.0 in `build.zig.zon`. Engine commits track no part of the swap. The same Zig API stays at the boundary — only the implementation under the hood changes.
 
 What's deliberately **not** in the platform stack:
 

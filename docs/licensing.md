@@ -49,7 +49,7 @@ Implications:
 
 ## Adapter sub-repos
 
-The C++ libraries zVoxRealms wraps (Jolt, VMA, ImGui, glslang, KTX, FlatBuffers, Tracy, libghostty, GameNetworkingSockets, Steamworks) are not vendored in-tree. Each adapter is a **standalone sub-repo with its own `LICENSE`**, consumed by zVoxRealms via `build.zig.zon` or a git submodule. Existing precedent: [`libs/zig-cpp-vulkan-adapter/`](../libs/zig-cpp-vulkan-adapter/).
+The C++ libraries zVoxRealms wraps (Jolt, VMA, ImGui, glslang, KTX, FlatBuffers, Tracy, libghostty, GameNetworkingSockets, Steamworks) are not vendored in-tree. Each adapter is a **standalone sub-repo with its own `LICENSE`**, consumed by zVoxRealms via `build.zig.zon` or a git submodule. Existing precedent: [`libs/zig-cpp-vulkan-stack-adapter/`](../libs/zig-cpp-vulkan-stack-adapter/).
 
 **License default for adapter sub-repos: MIT.** Reasons:
 

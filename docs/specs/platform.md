@@ -1,6 +1,6 @@
 # Platform Adapter Spec
 
-> The stable Zig API for window, events, action-mapped input, time, file I/O, and Vulkan-surface creation. Lives as a sub-repo at `libs/zig-platform-adapter/`. **Single Zig package, multiple backends as source files** — backend selected at build time per target.
+> The stable Zig API for window, events, action-mapped input, time, file I/O, and Vulkan-surface creation. Lives as a sub-repo at `libs/zig-cpp-platform-stack-adapter/`. **Single Zig package, multiple backends as source files** — backend selected at build time per target.
 >
 > Closes [`gaps.md` § 3 #14 input mapping](../gaps.md). Catalog row: [`external-libs-catalog.md` § 3](../external-libs-catalog.md) (Platform-stack meta-package). Migration design from [`tech-stack.md` § Windowing & Input](../tech-stack.md#windowing--input). Pattern precedent: SDL, Godot's `DisplayServer`, Unreal's `IPlatformApplication`.
 
@@ -41,7 +41,7 @@ const surface = try platform.createVulkanSurface(window, vk_instance);
 **Not** lib-in-lib. One Zig package, one `build.zig.zon`, one stable version across all backends. Backends are source files; the build system picks one per target.
 
 ```
-libs/zig-platform-adapter/
+libs/zig-cpp-platform-stack-adapter/
 ├── LICENSE                          # MIT
 ├── README.md
 ├── build.zig                        # per-target backend selection (see below)
@@ -71,7 +71,7 @@ libs/zig-platform-adapter/
 ## Build-time backend selection — per-target tree-shaking
 
 ```zig
-// libs/zig-platform-adapter/build.zig (sketch)
+// libs/zig-cpp-platform-stack-adapter/build.zig (sketch)
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -506,7 +506,7 @@ Adaptation rule per [`engine-references.md` § Legal](../engine-references.md): 
 
 Each step is its own atomic sub-repo commit. Engine repo doesn't touch this.
 
-### Release the native backend as `libs/zig-platform-adapter@v2.0`
+### Release the native backend as `libs/zig-cpp-platform-stack-adapter@v2.0`
 
 - Engine bumps the dep version in `build.zig.zon` from `v1.x` (GLFW) to `v2.0` (native)
 - One engine commit: `chore(deps): bump platform-adapter v1.x → v2.0 (native backend)`
