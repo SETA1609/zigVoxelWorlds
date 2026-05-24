@@ -1,3 +1,6 @@
 [submodule "libs/zig-cpp-vulkan-stack-adapter"]
 	path = libs/zig-cpp-vulkan-stack-adapter
 	url = https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter.git
+[submodule "libs/zig-cpp-platform-stack-adapter"]
+	path = libs/zig-cpp-platform-stack-adapter
+	url = git@github.com:SETA1609/zig-cpp-platform-stack-adapter.git
