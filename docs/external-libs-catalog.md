@@ -131,7 +131,7 @@ C++ adapter code follows [`cpp-style.md`](cpp-style.md) — Google C++ Style Gui
 | Library | Upstream | License | Adapter license | Role | Phase |
 | --- | --- | --- | --- | --- | --- |
 | **Vulkan-stack** (meta-package — see note below) | bundle: vulkan-zig · VMA · volk · shaderc | mixed permissive | MIT | Vulkan stack: bindings + GPU memory + loader + shader compile. Single sub-repo enforces version coherence | 1 / 4 / 7.5 |
-| **Platform-stack** (meta-package — see note below) | v0 bundle: GLFW · → · v1.x: pure-Zig X11/Wayland/Win32/Android | Zlib (v0) → all permissive (v1.x) | MIT | Window · events · input · time · file I/O · native window handle exposure. **No Vulkan dep** — renderer creates surfaces from the handle. Same Zig API across the GLFW → native migration ([`specs/platform.md`](specs/platform.md)) | 1 |
+| **Platform-stack** (meta-package — see note below) | v0 bundle: GLFW · → · v1.x: pure-Zig X11/Wayland/Win32/Android | Zlib (v0) → all permissive (v1.x) | MIT | Window · events · input · time · file I/O · per-OS native handle getters. **No Vulkan dep and no cross-adapter dep** — engine bridges per-OS getters to vulkan-stack's per-OS creators. Same Zig API across the GLFW → native migration ([`specs/platform.md`](specs/platform.md)) | 1 |
 | **Jolt Physics** | <https://github.com/jrouwe/JoltPhysics> | MIT | MIT | Physics solver, characters, ragdolls | 5 |
 | **Dear ImGui** | <https://github.com/ocornut/imgui> | MIT | MIT | Editor / dev panels | 1 |
 | **ImGuizmo** | <https://github.com/CedricGuillemet/ImGuizmo> | MIT | MIT | 3D transform gizmos in the scene editor | 12 |
@@ -192,9 +192,9 @@ What's **not** in the stack:
 
 Second instance of the meta-package pattern (the first is the Vulkan-stack above). The sub-repo lives at `libs/zig-cpp-platform-stack-adapter/`.
 
-The platform adapter exposes a stable Zig API to the engine (window, events, action-mapped input, time, file I/O, and a `nativeHandle(window) → NativeWindowHandle` getter for the renderer). The implementation backend is internal to the adapter and **can change between major versions of the sub-repo without engine source changes**.
+The platform adapter exposes a stable Zig API to the engine (window, events, action-mapped input, time, file I/O, and per-OS native handle getters: `getX11Handle` / `getWaylandHandle` / `getWin32Handle` / `getAndroidHandle`). The implementation backend is internal to the adapter and **can change between major versions of the sub-repo without engine source changes**.
 
-**No Vulkan dependency.** Surface creation lives in the Vulkan-stack adapter, which imports `NativeWindowHandle` (a tagged union of raw OS window handles) and provides `createSurface(instance, handle) → vk.SurfaceKHR`. The platform adapter never sees a `vk.*` type — a headless tool can link it without dragging vulkan-zig along. The cross-adapter relationship is `vulkan-stack → platform-stack` (one-way data dep; no cycle).
+**No Vulkan dependency and no cross-adapter dependency.** Surface creation lives in the Vulkan-stack adapter via its own per-OS functions (`createX11Surface` / `createWaylandSurface` / `createWin32Surface` / `createAndroidSurface`), each taking only raw OS primitives (pointers + integers). The engine wires the two together in a small `src/render/surface.zig` helper that comptime-branches on `builtin.target.os.tag`. **No shared type crosses the boundary** — both adapters are fully standalone and reusable in isolation. Reference precedent: GLFW's `glfw3native.h` getters + Vulkan's own `VK_KHR_*_surface` extension pairs.
 
 | Version | Backend | Why |
 | --- | --- | --- |
@@ -205,7 +205,7 @@ Engine code looks identical across the migration:
 
 ```zig
 const platform = @import("platform");
-const vk_stack = @import("vulkan_stack");
+const render   = @import("render");   // engine's own bridge module
 
 const window = try platform.Window.create(.{
     .title = "zVoxRealms",
@@ -222,8 +222,12 @@ while (platform.nextEvent()) |ev| switch (ev) {
 
 if (input.actionPressed(.jump)) player.jump();
 
-// Surface creation: platform exposes the handle, vulkan-stack creates the surface.
-const surface = try vk_stack.createSurface(vk_instance, platform.nativeHandle(window));
+// Surface creation lives in the engine's bridge helper, not in either
+// adapter. The helper calls platform's per-OS getter (getX11Handle /
+// getWin32Handle / etc.) and the matching vulkan-stack creator
+// (createX11Surface / createWin32Surface / etc.). Comptime-resolved
+// per target — no runtime cross-platform branching.
+const surface = try render.createSurface(vk_instance, window);
 ```
 
 Migration trigger is bumping `libs/zig-cpp-platform-stack-adapter` from v1.0 to v2.0 in `build.zig.zon`. Engine commits track no part of the swap. The same Zig API stays at the boundary — only the implementation under the hood changes.
