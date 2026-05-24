@@ -1,4 +1,14 @@
-name: build
+# Trunk-stays-green CI per CONTRIBUTING.md § Branching strategy.
+#
+# Two jobs:
+#   lint   — zig fmt + clang-format checks. Ubuntu-only; OS-independent.
+#   build  — zig build + run smoke test. Matrixed over Linux + Windows
+#            (v1.0 targets per mission.md; macOS deferred post-v1.0).
+#
+# The `build` job depends on `lint` so a format violation short-circuits
+# the more expensive matrix.
+
+name: CI
 
 on:
   push:
@@ -6,27 +16,107 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel in-flight runs on the same ref when a new commit lands.
+# PRs that get force-pushed don't pile up duplicate runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ZIG_VERSION: 0.16.0
+
 jobs:
+  # ---------------------------------------------------------------------------
+  # Lint — format checks.
+  # Required PR status to keep `main` always green per the branching policy.
+  # ---------------------------------------------------------------------------
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      # Submodules in .gitmodules use SSH URLs (git@github.com:...) per the
+      # normalize-submodules-to-ssh commit. GitHub Actions has no SSH key
+      # by default; rewrite SSH→HTTPS at clone time so the runner's
+      # GITHUB_TOKEN handles auth. Public sub-repos clone anonymously.
+      - name: Configure git URL rewrite for submodule HTTPS access
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Zig ${{ env.ZIG_VERSION }}
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: zig fmt --check
+        # Verifies every .zig file under src/ + build.zig is canonically formatted.
+        # Adapter sub-repos run their own zig fmt in their own CI.
+        run: zig fmt --check build.zig src/
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang-format
+
+      - name: clang-format --dry-run -Werror
+        # Verifies every C/C++ translation unit + header under src/c and src/cpp
+        # matches .clang-format. Non-zero exit on any deviation per cpp-style.md.
+        run: |
+          find src/c src/cpp -type f \
+            \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) \
+            -print0 | xargs -0 -r clang-format --dry-run -Werror
+
+  # ---------------------------------------------------------------------------
+  # Build matrix — Linux + Windows are v1.0 targets per mission.md.
+  # macOS deferred post-v1.0; re-add to the matrix when it becomes a target.
+  # ---------------------------------------------------------------------------
   build:
-    name: ${{ matrix.os }}
+    name: build (${{ matrix.os }})
+    needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - name: Configure git URL rewrite for submodule HTTPS access
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
 
-      - name: Install Zig
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Zig ${{ env.ZIG_VERSION }}
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.16.0
+          version: ${{ env.ZIG_VERSION }}
+
+      # Cache .zig-cache + zig-out across runs to avoid recompiling unchanged
+      # dependencies. Invalidated when build.zig or build.zig.zon changes.
+      - name: Cache zig artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .zig-cache
+            zig-out
+          key: ${{ runner.os }}-zig-${{ env.ZIG_VERSION }}-${{ hashFiles('build.zig', 'build.zig.zon', '.gitmodules') }}
+          restore-keys: |
+            ${{ runner.os }}-zig-${{ env.ZIG_VERSION }}-
 
       - name: zig version
         run: zig version
 
-      - name: Build
+      - name: zig build
         run: zig build
 
-      - name: Run
+      - name: zig build run
+        # Smoke test: the hello-world stub prints and exits 0.
+        # Once the engine grows past hello-world this remains the
+        # headless smoke-test entry point.
         run: zig build run
+
+      # TODO Phase 1: add `zig build test` once build.zig declares a `test`
+      # step. Required-status will gate test failures per PR. Until then this
+      # is a no-op slot.
