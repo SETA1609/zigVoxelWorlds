@@ -271,21 +271,36 @@ Three categories, with clear rules.
 
 ### 8.1 Needs an adapter wrapper
 
-Heavy C++ libraries (or complex C libs we want isolation from). Each gets its own sub-project under `adapters/<name>/` with its own `build.zig` and an `extern "C"` boundary. Zig never sees raw C++.
+Heavy C++ libraries (or complex C libs we want isolation from). Each gets its own standalone sub-repo under `libs/zig-cpp-<name>-{stack-,}adapter/` with its own `build.zig`, `LICENSE`, and an `extern "C"` boundary where it crosses C++. Zig never sees raw C++. **Source of truth for the full committed list: [`external-libs-catalog.md` § 3](external-libs-catalog.md).** The list below is a high-level categorization, not exhaustive.
+
+#### Meta-package adapters (bundle multiple version-coupled libs)
+
+| Sub-repo | Bundles | Why bundle |
+| --- | --- | --- |
+| [**`libs/zig-cpp-vulkan-stack-adapter`**](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) | vulkan-zig (Zig-native, re-exported) + VMA + volk + shaderc | All four are version-coupled to a specific Vulkan version. Bundling makes the version-pin atomic per sub-repo release |
+| [**`libs/zig-cpp-platform-stack-adapter`**](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) | GLFW (v0) → pure-Zig X11/Wayland/Win32/Android (v1.x) | Stable Zig API across the GLFW → native migration. Engine source doesn't change when the backend swaps |
+
+The two meta-package adapters are fully standalone — no cross-import, no shared types. The engine wires them in a tiny `src/render/surface.zig` bridge that calls per-OS getters from platform-stack + per-OS surface creators from vulkan-stack. See [`specs/platform.md` § Rule 2](specs/platform.md).
+
+#### Single-lib adapters
 
 | Library | Purpose | Reason it needs an adapter |
 | --- | --- | --- |
-| **Jolt Physics** | Character controllers, ragdolls, destructible bodies, vehicles | C++ — must wrap. Heavy API surface |
-| **VMA** (Vulkan Memory Allocator) | GPU memory management for Vulkan | C++ |
-| **Dear ImGui** | Editor tools, dev panels | C++ — large API surface; we want to insulate the Zig side |
-| **glslang / slangc** | GLSL/HLSL/Slang → SPIR-V compilation | C++ |
-| **KTX2 / Basis Universal** | GPU-compressed textures (BC7 / ASTC), mipmaps | basisu is C++ |
-| **GameNetworkingSockets** | Reliable UDP transport (one of two candidates) | C++ |
-| **Steamworks SDK** | Steam Workshop, achievements, cloud saves (conditional) | C++, vendor SDK |
-| **FlatBuffers** or **Cap'n Proto** | Zero-copy structured save data (one to be picked) | C++ |
+| **Jolt Physics** | Character controllers, ragdolls, destructible bodies, vehicles | C++ — heavy API surface |
+| **Dear ImGui** | Editor tools, dev panels | C++ — large API surface; insulate the Zig side |
+| **KTX2 / Basis Universal** | GPU-compressed textures (BC7 / ASTC), mipmaps | basisu is C++; codec patent grant wants Apache-2.0 adapter LICENSE |
+| **Recast / Detour** | NavMesh + A* pathfinding for AI | zlib lib but C++; per [`specs/ai.md`](specs/ai.md) |
+| **HarfBuzz** + **msdfgen** | Complex-script text shaping + SDF font atlases | Both C++ |
+| **ImGuizmo** + **imnodes** | Editor 3D gizmos + node-graph UI | C++ ImGui companions |
+| **Crashpad** | Out-of-process crash reporter for shipped builds | C++ |
+| **WAMR** | Sandboxed WASM runtime for third-party mods | Complex C with non-trivial lifecycle |
+| **GameNetworkingSockets** (post-v1.0) | Reliable UDP transport + Steam relay | C++; deferred to v1.x for Steam relay |
+| **Steamworks SDK** | Steam Workshop, achievements, DLC gating (conditional) | C++, vendor SDK |
 | **Tracy** | High-precision CPU/GPU profiling | C++ — has its own client library |
 
-Pattern: `adapters/<name>/build.zig` builds the C/C++ as a static lib; `adapters/<name>/adapter.h` exposes only `extern "C"` functions; `adapters/<name>/adapter.zig` exposes a typed Zig module on top.
+Save-data binary format is hand-rolled per [`specs/save-ux.md`](specs/save-ux.md) — no FlatBuffers / Cap'n Proto dependency.
+
+Pattern: each sub-repo's `build.zig` builds the C/C++ as a static lib; the sub-repo's `src/c/adapter.h` exposes only `extern "C"` functions; the sub-repo's idiomatic Zig wrapper (`src/<name>.zig`) re-exports typed Zig types on top.
 
 ### 8.2 Directly added (no adapter wrapper)
 
@@ -293,9 +308,7 @@ Either pure-Zig dependencies or single-header / small C libraries that are trivi
 
 | Library | Purpose | Why direct |
 | --- | --- | --- |
-| **vulkan-zig** (or volk via `@cImport`) | Vulkan loader + bindings | Zig-native bindings exist; loader is a thin C lib |
 | **TOML parser** (`zig-toml` or similar) | Hand-authored data (skills, recipes, scenes, manifests) | Zig-native package available |
-| **GLFW** | Window + input (transitional; replaced later by pure Zig platform layer per [`tech-stack.md`](tech-stack.md#windowing--input)) | Pure C, used behind a thin Zig `platform/` module |
 | **cgltf** | glTF 2.0 model loading | Single-header C — `@cImport` directly |
 | **miniaudio** | Audio playback / mixing / streaming | Single-header C |
 | **ENet** | Reliable UDP (one of two candidates) | Plain C, small API; use via `@cImport` |
