@@ -372,7 +372,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 
 ### §3.3 — Gameplay shapes — what your four games actually look like at the engine level
 
-14. **⏰ before Phase 1** (input layer) **Input mapping** — keyboard/mouse/gamepad, rebinding, action-based
+14. ~~**⏰ before Phase 1** (input layer) **Input mapping**~~ → ✅ **decided**: action-mapped input with `bindAction`/`unbindAction`/`actionPressed`; bindings load from TOML, per-save rebindings in save format. See [`specs/platform.md` § Action-mapped input](specs/platform.md)
 15. **⏰ before Phase 12** **UI scaling** — DPI awareness, controller-friendly nav, font subsystem
 16. **⏰ before Phase 13** **Save slot UX** — see §2.2.C
 17. **⏰ before Phase 8** **Quest system data model** — flags, state machines, branching dialog, scripted
@@ -447,7 +447,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 ### Pre-coding for each phase
 
 14. ✅ Camera model (before Phase 1, §2.2.K) — landed in `specs/camera.md` (first-person primary committed)
-15. ⏳ Input mapping (before Phase 1, #14) — still open
+15. ✅ Input mapping (#14) — landed in `specs/platform.md` § Action-mapped input (context stack + synthetic injection + axis modifiers)
 16. ⏳ Origin rebasing strategy (before Phase 6, #11) — still open
 17. ⏳ Quest / AI / magic / crafting / inventory data models (before Phase 8, #17–21) — open per game-system design
 18. ⏳ Network transport + authority (before Phase 10, #25–28) — still open
