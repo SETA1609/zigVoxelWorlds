@@ -376,7 +376,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 15. **⏰ before Phase 12** **UI scaling** — DPI awareness, controller-friendly nav, font subsystem
 16. **⏰ before Phase 13** **Save slot UX** — see §2.2.C
 17. **⏰ before Phase 8** **Quest system data model** — flags, state machines, branching dialog, scripted
-18. **⏰ before Phase 8** **NPC AI architecture** — utility AI, BT, GOAP, hand-coded states; schedules vs roaming
+18. ~~**⏰ before Phase 8** **NPC AI architecture**~~ → ✅ **decided**: Behavior Trees + NavMesh (Recast/Detour) + perception + distance-tiered AI LOD (Hot/Warm/Cold/Frozen) for Daggerfall scale. See [`specs/ai.md`](specs/ai.md)
 19. **⏰ before Phase 8** **Magic system data model** — effect composition, mana/cost, cooldowns, target acquisition
 20. **⏰ before Phase 8** **Crafting math** — quality formula, time-cost, success curves, station types
 21. **⏰ before Phase 8** **Inventory model** — slots, weight, stack rules, container hierarchy, equipped vs carried
@@ -396,7 +396,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 
 ### §3.6 — Process — how you actually work
 
-29. **⏰ before commit #2** **Branching strategy** — trunk-based with flags vs gitflow
+29. ~~**⏰ before commit #2** **Branching strategy**~~ → ✅ **decided**: trunk-based with build flags. Single `main`, feature branches merged little-and-often, release tags as snapshot points. See [`CONTRIBUTING.md` § Branching strategy](../CONTRIBUTING.md)
 30. **📅 when it goes public** **Issue tracker** — GitHub Issues + labels? Linear?
 31. **📅 post Phase 11** **Release cadence** — weekly dev / monthly stable / yearly major
 32. **🔥 Test strategy** — see §2.2.G
@@ -441,7 +441,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 9. ✅ Threading model (#12, §2.1.I) — landed in `specs/threading.md`
 10. ✅ C ABI surface skeleton (#13) — landed in `specs/c-abi.md`
 11. ✅ Test strategy (#32) — landed in `specs/testing.md`
-12. ⏳ Branching strategy (#29) — still open; trivial decision pending commit
+12. ✅ Branching strategy (#29) — landed in `CONTRIBUTING.md` § Branching strategy (trunk-based with build flags)
 13. ✅ ABI versioning policy (#23) — landed in `specs/c-abi.md`
 
 ### Pre-coding for each phase
@@ -449,7 +449,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 14. ✅ Camera model (before Phase 1, §2.2.K) — landed in `specs/camera.md` (first-person primary committed)
 15. ✅ Input mapping (#14) — landed in `specs/platform.md` § Action-mapped input (context stack + synthetic injection + axis modifiers)
 16. ⏳ Origin rebasing strategy (before Phase 6, #11) — still open
-17. ⏳ Quest / AI / magic / crafting / inventory data models (before Phase 8, #17–21) — open per game-system design
+17. ⏳ Quest / magic / crafting / inventory data models (before Phase 8, #17, #19, #20, #21) — open per game-system design. AI (#18) ✅ landed in `specs/ai.md`
 18. ⏳ Network transport + authority (before Phase 10, #25–28) — still open
 19. ⏳ Performance regression CI (before Phase 5, #33) — still open
 20. ✅ Save UX + slot management (before Phase 13, #16) — landed in `specs/save-ux.md`

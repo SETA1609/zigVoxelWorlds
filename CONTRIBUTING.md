@@ -101,6 +101,29 @@ chore(deps): bump Jolt to 5.1.0
 
 **Author + committer:** both fields must use the GitHub noreply format `SETA1609 <123449150+SETA1609@users.noreply.github.com>` per [no-PII policy](../docs/licensing.md). Apply via `--author` flag + `GIT_COMMITTER_NAME` + `GIT_COMMITTER_EMAIL` env vars. Never commit with the global git-config default if it leaks PII.
 
+### Branching strategy — trunk-based with build flags
+
+**`main` is always green and is where everything lands.** No long-lived `develop` / `release-*` / per-feature integration branches. Resolves [`gaps.md` § 3 #29](docs/gaps.md).
+
+| Branch | Lifetime | Used for |
+| --- | --- | --- |
+| `main` | forever | The trunk. Always builds, always tested. All work merges here |
+| Feature branches (`feat/<name>`, `fix/<name>`, `docs/<name>`) | days to weeks | One concern at a time; merge to `main` when done; deleted after merge |
+| Release tags (`v0.1.0`, `v0.2.0`, ..., `v1.0.0`, ...) | forever | Snapshot points. No long-lived release branches — tag and move on |
+
+**Feature flags handle "not yet ready" code in trunk.** This project already uses `-Dsteam=true`, `-Dtracy=true`, `-Dplatform_backend=glfw|native` build options as the gating mechanism for optional / WIP features. The same pattern applies to gameplay-side WIP — gate behind a `-Dfeature_<name>` flag rather than parking on a long-lived branch. Cheaper to merge little-and-often than to maintain a branch that drifts.
+
+**Why trunk-based + flags, not GitFlow:**
+
+- Solo-dev pre-1.0 — no team coordination overhead that GitFlow's release-train solves
+- The engine-as-app + per-project tree-shake model already implies build flags as the toggle mechanism; trunk-based + flags is the same pattern at the source level
+- Adapter sub-repos already work this way (each has one `main`)
+- Reference precedent: Hazel, Mach, and most solo-dev Zig engines use single-branch trunk
+
+**Hotfixes after v1.0 ships:** branch from the release tag, cherry-pick fixes, tag the patch (`v1.0.1`), merge the hotfix forward to `main` if not already there. No long-lived release branches — branches exist only as long as the hotfix work takes. Pattern formalized when v1.0 actually approaches (post-Phase 15 concern).
+
+**For now:** single `main` branch; feature branches as needed; tags at release points. The hotfix machinery doesn't matter until you have something to hotfix.
+
 ## Pull request expectations
 
 - One concern per PR. Split if it grows.
