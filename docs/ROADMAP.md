@@ -6,25 +6,34 @@ The roadmap is **vertical-slice-driven**: each phase ends with something runnabl
 
 ---
 
-## Phase 0: Foundation (In Progress)
+## Phase 0: Foundation (Closing)
 
 Planning, layout, decisions — no engine code beyond hello-world.
 
 - [x] Zig + C + C++ hybrid build system (`src/main.zig` + `src/c/` + `src/cpp/` build via `build.zig`)
 - [x] Planning documents in `docs/` (vision, mission, ARCHITECTURE, tech-stack, project-structure, engine-vs-game, engine-references, external-libs-catalog, external-libs-survey, licensing, cpp-style, guard, gaps, ROADMAP, mvp, plus `specs/*.md`)
-- [ ] On-disk project layout matches [`project-structure.md`](project-structure.md)
-- [ ] Build artifact renamed from `demo` to `zvoxrealms` in `build.zig`
-- [ ] Data-schema docs landed (per [`gaps.md` § 3](gaps.md))
+- [x] Data-schema docs landed (per [`gaps.md` § 3](gaps.md)) — `specs/data-schemas.md`, `specs/core-types.md`, `specs/c-abi.md`, `specs/threading.md`, `specs/testing.md`
+- [x] Meta-package adapter sub-repos set up — [`zig-cpp-vulkan-stack-adapter`](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) + [`zig-cpp-platform-stack-adapter`](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) with LICENSE + README + build.zig.zon at scaffolding parity
+- [x] CI baseline — `.github/workflows/build.yml` (lint + matrix build + submodule fetch + cache)
+- [x] Branching strategy decided — trunk-based with build flags per [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+- [ ] On-disk project layout matches [`project-structure.md`](project-structure.md) — landing in Phase 1 sprint
+- [ ] Build artifact renamed from `demo` to `zvoxrealms` in `build.zig` — landing in Phase 1 sprint
 
-See [`mvp.md`](mvp.md) for the MVP definition (= Phase 1 + Phase 2).
+See [`mvp.md`](mvp.md) for the MVP definition (= Phase 1 + Phase 2). Active sprint plan: [`sprint.md`](sprint.md).
 
 ---
 
-## Phase 1: Window + Vulkan Basics (Next)
+## Phase 1: Window + Vulkan Basics (Active)
 
-Open a Vulkan window, render a debug primitive. Validates the platform layer + renderer scaffolding.
+Open a Vulkan window, render a debug primitive. Validates the platform layer + renderer scaffolding + meta-package adapter consumption.
 
-**Milestone:** colored rotating cube on screen.
+Wires up:
+
+- [`libs/zig-cpp-platform-stack-adapter`](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) as `build.zig.zon` dep — engine imports `@import("platform")`; v0 backend is GLFW
+- [`libs/zig-cpp-vulkan-stack-adapter`](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) as `build.zig.zon` dep — engine imports `@import("vulkan_stack")`; re-exports vulkan-zig + wraps VMA/volk/shaderc
+- `src/render/surface.zig` bridge helper per [`specs/platform.md` § Rule 2](specs/platform.md) — pairs `platform.get*Handle(window)` with `vk_stack.create*Surface(instance, ...)` at comptime per target OS
+
+**Milestone:** colored rotating cube on screen via the GLFW v0 backend + the Vulkan-stack adapter. Action-mapped input (`platform.actionPressed(.menu_pause)`) quits the demo.
 
 ---
 
@@ -32,9 +41,9 @@ Open a Vulkan window, render a debug primitive. Validates the platform layer + r
 
 Architectural backbone. Module contract (`modules/<name>/{config.zig, register_types.zig, src/}` + four init levels), comptime dispatch codegen, `Handle` opaque ID, `RenderServer` scaffolding, `src/core/{profile, log_sink, metrics}.zig` no-op stubs.
 
-Borrows: [Godot module system + server pattern](engine-references.md), [Unreal plugin descriptor](engine-references.md). Architecture: [`ARCHITECTURE.md` § Module System + § Server Pattern](ARCHITECTURE.md).
+Borrows: [Godot module system + server pattern](engine-references.md), [Unreal plugin descriptor](engine-references.md). Architecture: [`ARCHITECTURE.md` § Module System + § Server Pattern](ARCHITECTURE.md). Handle layout + core types: [`specs/core-types.md`](specs/core-types.md). Threading: [`specs/threading.md`](specs/threading.md). C ABI: [`specs/c-abi.md`](specs/c-abi.md).
 
-**Milestone:** boot the engine, load `modules/hello/` through all four init levels, render the rotating cube via `RenderServer` calls (scene code holds only handles).
+**Milestone:** boot the engine, load `modules/hello/` through all four init levels, render the rotating cube via `RenderServer` calls — scene code holds only handles, never raw Vulkan objects.
 
 ---
 
@@ -97,21 +106,22 @@ Specs already drafted, awaiting implementation:
 - [`specs/animation.md`](specs/animation.md) — skeletal animation + state machines + IK
 - [`specs/particles.md`](specs/particles.md) — GPU particle simulation + emitter authoring
 - [`specs/audio.md`](specs/audio.md) — bus tree + 3D positional + reverb zones + music streaming
-- [`specs/ui.md`](specs/ui.md) — in-game UI engine (anchor layout, widgets, controller nav)
+- [`specs/ui.md`](specs/ui.md) — in-game UI engine (anchor layout, widgets, controller nav, tweens, transitions)
 - [`specs/dialog.md`](specs/dialog.md) — Morrowind/Daggerfall-style modal dialog + trade + services (world pauses), gamepad-first
 - [`specs/events.md`](specs/events.md) — pub/sub messaging bus
 - [`specs/lighting.md`](specs/lighting.md) — scene lighting + decals + weather + time-of-day
 - [`specs/materials.md`](specs/materials.md) — PBR materials + shader pipeline cache
+- [`specs/post-processing.md`](specs/post-processing.md) — ACES tonemap + FXAA + bloom + LUT + vignette
 
 **Milestone:** Player walks through a torch-lit cave (lighting); torch flame flickers (particles + lighting); footsteps echo (3D positional audio with reverb zone); rain starts outside (weather + particles); approach an NPC, dialog opens (UI + dialog) and the world pauses (Morrowind-style modal); cast a fire spell, fireball particles bounce off voxels (collision), sparks light voxel surfaces; gameplay event fires (`spell.cast`), achievement listener catches it.
 
 ## Phase 8: Gameplay Modules (Data-Driven)
 
-Skills, perks, magic, crafting, inventory — each its own module under `modules/`. All data-driven via TOML.
+Skills, perks, magic, crafting, inventory, and AI — each its own module under `modules/`. All data-driven via TOML.
 
-Spec: [`specs/gameplay.md`](specs/gameplay.md).
+Specs: [`specs/gameplay.md`](specs/gameplay.md) + [`specs/ai.md`](specs/ai.md) (Behavior Trees + NavMesh via Recast/Detour + perception + AI LOD tiers). Quest / magic / crafting / inventory data models open per [`gaps.md` § 3 #17, #19, #20, #21](gaps.md) — to be spec'd before this phase starts.
 
-**Milestone:** player casts a custom-made spell and crafts a sword whose quality reflects skill.
+**Milestone:** player casts a custom-made spell and crafts a sword whose quality reflects skill; a Daggerfall-style NPC with a daily schedule lives in a 200-NPC town with AI LOD tiers active.
 
 ---
 
@@ -196,6 +206,6 @@ Integration milestone: one town, 3–5 dungeons, one main quest line, classless 
 
 ---
 
-**Current priority:** finish Phase 0 planning (data-schema docs in [`gaps.md` § 3](gaps.md)), then begin Phase 1.
+**Current priority:** Phase 1 (Window + Vulkan Basics) — active sprint plan in [`sprint.md`](sprint.md). Phase 0 closes alongside the first sprint commits (binary rename + project layout).
 
-See: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`engine-vs-game.md`](engine-vs-game.md), [`external-libs-catalog.md`](external-libs-catalog.md), [`engine-references.md`](engine-references.md), [`gaps.md`](gaps.md), [`mvp.md`](mvp.md), [`specs/`](specs/).
+See: [`vision.md`](vision.md), [`mission.md`](mission.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`tech-stack.md`](tech-stack.md), [`project-structure.md`](project-structure.md), [`engine-vs-game.md`](engine-vs-game.md), [`external-libs-catalog.md`](external-libs-catalog.md), [`external-libs-survey.md`](external-libs-survey.md), [`engine-references.md`](engine-references.md), [`gaps.md`](gaps.md), [`mvp.md`](mvp.md), [`sprint.md`](sprint.md), [`specs/`](specs/).
