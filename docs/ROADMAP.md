@@ -185,13 +185,45 @@ Spec: [`engine-vs-game.md`](engine-vs-game.md) (modding ABI is the same stable C
 
 ---
 
-## Phase 15: v1.0 — Voxel Daggerfall Slice
+## Phase 15: v1.0 — Megabonk-paced HG Arena Slice
 
-**v1.0 ships one target: the voxel Daggerfall-clone slice.** Not all four target games. The other three (voxel rogue-like / voxel Stardew / voxel Atelier) are v1.1–v1.3 derivatives — content-only reskins on top of the same engine + modkit. See [`vision.md`](vision.md) § Shipping strategy.
+**Shipping order revised 2026-05-25 — iterative-small-first.** v1.0 is now the smallest revenue-capable target: the Megabonk-paced + Minecraft-HG + Diablo-loot hybrid in `modules/arena_modes/`. Daggerfall — previously planned as v1.0 — moves to v1.4/v2.0 as the long-term flagship, **funded and team-scaled** rather than attempted from a cold solo-dev start. See [`vision.md`](vision.md) § Shipping strategy.
 
-Integration milestone: one town, 3–5 dungeons, one main quest line, classless skills + spellmaking + crafting, 4-player co-op stable for a 1-hour session, mod loader live, modkit shipped for third-party mods, replay system for debugging + content creation. Shipped as an exported per-project bundle on a clean machine. Released commercially on Steam.
+Integration milestone for v1.0: one arena map, PvE wave-survival mode, PvP FFA + teams mode, configurable max-players, RPG loot drops from shared registry (swords/staves/potions/scrolls/magic books/pickaxe), Fallout-style skills + perks + 9 color-magic schools, **Minecraft-style voxel destruction with hardness + tool-tier + 10-stage break overlay (y > ground only)**, server-authoritative validation in PvP, mod loader live, modkit shipped, replay system for debugging. Shipped as an exported per-project bundle on a clean machine. Released commercially on Steam at indie price point.
 
-**Milestone:** v1.0 voxel Daggerfall slice playable end-to-end on a clean machine without Zig installed; modkit available for third-party modders.
+**Milestone:** v1.0 arena slice playable end-to-end on a clean machine without Zig installed; modkit available for third-party modders.
+
+---
+
+## Phase 16: v1.1 — Voxel Roguelike Dungeon Crawler
+
+**Builds on:** v1.0 engine surface. Adds procedural floors with rooms + corridors, boss patterns, permadeath save flag.
+
+~2–3 months content + tweaks. Shares all combat / loot / progression with v1.0.
+
+---
+
+## Phase 17: v1.2 — Voxel Atelier-style Crafting RPG
+
+**Builds on:** v1.1 engine surface. Adds the deep crafting layer — multi-stage synthesis, quality formulas (`f(skill_level, ingredient_qualities, station_tier, rng_seed)`), recipe discovery, Atelier-signature synthesis UI. **Crafting alone — no voxel building yet.**
+
+~3–4 months. Why Atelier before Stardew: Atelier needs crafting only; Stardew needs crafting + voxel building.
+
+---
+
+## Phase 18: v1.3 — Voxel Stardew Valley
+
+**Builds on:** v1.2 engine surface. Adds **voxel building on top of crafting** (farm buildings, fences, paths, sprinklers), day/night/seasons clock, NPC relationships + heart events, edit-policy for farm/mines.
+
+~4–5 months. The build-on-top-of-craft dependency is why this ships after Atelier.
+
+---
+
+## Phase 19+: v1.4 / v2.0 — Voxel Daggerfall Slice (long-term flagship)
+
+**Builds on:** v1.3 engine surface. Adds large-world streaming (10 × 10 km × 2 km), full dialog tree, factions, full quest system, animation polish, world-scale optimization passes.
+
+**Funded by v1.0–v1.3 revenue + (potentially) hired developers.** Multi-year. This is the original flagship vision — not deprioritized, **front-funded.**
 
 ---
 

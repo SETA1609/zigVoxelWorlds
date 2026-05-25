@@ -4,7 +4,7 @@
 
 **MVP = Phase 1 + Phase 2 delivered.**
 
-The MVP is **not** the v1.0 game release — that's Phase 15. Conflating them creates pressure to declare "done" prematurely. The MVP validates the *architecture*; v1.0 ships the **voxel Daggerfall slice** (one target game, not all four — see [`vision.md`](vision.md) § Shipping strategy). The other three voxel games (rogue-like / Stardew / Atelier) follow as v1.1–v1.3 content-only derivatives.
+The MVP is **not** the v1.0 game release — that's Phase 15. Conflating them creates pressure to declare "done" prematurely. The MVP validates the *architecture*; v1.0 ships the **Megabonk-paced HG arena slice** (one target game out of five, per the iterative-small-first shipping order — see [`vision.md`](vision.md) § Shipping strategy). The other four voxel games (rogue-like → Atelier → Stardew → Daggerfall flagship) follow as v1.1 → v1.4/v2.0. Daggerfall — previously planned as v1.0 — is now the long-term flagship, **funded** by earlier releases rather than attempted from a cold start. Strategy revised 2026-05-25.
 
 ## Definition of done
 

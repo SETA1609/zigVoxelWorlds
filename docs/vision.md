@@ -91,22 +91,25 @@ The vision is sharpened by what's explicitly out of scope.
 
 ---
 
-## Shipping strategy — v1.0 = the voxel Daggerfall slice; v1.1+ = derivatives
+## Shipping strategy — iterative-small-first (revised 2026-05-25)
 
-**v1.0 commits to one target: the voxel Daggerfall-clone slice.** Not all four games at once.
+**Previous strategy** (now superseded): "Daggerfall first because it's the superset; the others become content packs on the proven engine." That argument cited Bethesda's Creation Engine line — but Bethesda has hundreds of developers. zVoxRealms is a solo project. The Daggerfall-first plan was incompatible with "first-shipped game funds further development."
 
-Reasoning: Daggerfall-clone is the **superset** of what the other three target games need. Building it forces the engine to be complete (animation, large-world streaming, dialog, faction system, quest system, modding). The other three are then content-only derivatives — same engine, different `core_mod`, different scene policies.
+**New strategy:** Ship the smallest viable target first to validate the engine + earn early revenue + gather player feedback, then climb the dependency ladder toward Daggerfall as the long-term flagship.
 
 The shipping ladder:
 
 | Version | Target | What's new beyond previous |
 | --- | --- | --- |
-| **v1.0** | Voxel Daggerfall slice (one town, 3–5 dungeons, one main quest line, classless skills + spellmaking + crafting, 4-coop, mod loader live, modkit shipped) | The engine + the full content pipeline + first shipped game |
-| **v1.1** | Voxel rogue-like dungeon crawler | Different `core_mod` + permadeath save flag + procedural-run scoping. ~2–3 months content + tweaks |
-| **v1.2** | Voxel Stardew Valley | Different `core_mod` + cozy NPC schedules + edit-policy for farm/mines + relationships. ~3–4 months content |
-| **v1.3** | Voxel Atelier-style crafting RPG | Different `core_mod` + synthesis depth + party-affinity. ~3–4 months content |
+| **v1.0** | Megabonk-Survivors + Hunger Games hybrid (`modules/arena_modes/`) — small arena, PvE wave-survival + PvP FFA modes, configurable max-players, RPG loot from shared registry, Fallout-style skills/perks/magic | Engine validation: combat + inventory + magic + skills + perks + multiplayer + voxel rendering + procedural arenas. Smallest revenue-capable surface. |
+| **v1.1** | Voxel rogue-like dungeon crawler (`modules/rogue_tower/`) | Procedural floors with rooms/corridors + boss patterns + permadeath save flag. Shares all combat/loot/progression with v1.0. ~2–3 months. |
+| **v1.2** | Voxel Atelier-style crafting / alchemy RPG | Adds the deep crafting layer: multi-stage synthesis, quality formulas, recipe discovery, Atelier-signature synthesis UI. **Crafting alone — no building.** ~3–4 months. |
+| **v1.3** | Voxel Stardew Valley life sim | Adds **voxel building on top of crafting** (farm buildings, fences, paths, sprinklers), day/night/seasons, NPC relationships + heart events, edit-policy for farm/mines. The build-on-top-of-craft dependency is why Atelier ships before Stardew. ~4–5 months. |
+| **v1.4 / v2.0** | Voxel Daggerfall-style open-world RPG — the long-term flagship | Large-world streaming, full dialog tree, factions, full quest system, animation polish, world scale: 10×10 km × 2 km vertical. Funded by revenue + (potentially) hired developers from v1.0–v1.3. Multi-year. |
 
-Total v1.1 → v1.3: **~10 months**. After Daggerfall ships, the other three are content packs leveraging the same engine + modkit + content-authoring tools. Industry precedent: Bethesda's Creation Engine line (Morrowind → Oblivion → Skyrim → Fallout 3/4) — same engine, evolving content.
+Total v1.0 → v1.3: aims for ~12–15 months. The Daggerfall flagship arrives after that, **funded and team-scaled** rather than attempted from a cold start.
+
+**Daggerfall is not deprioritized as a vision** — it remains the long-term flagship. The reorder front-loads revenue + engine validation so Daggerfall can be built properly (with hired help and more time) rather than half-finished from a solo cold start.
 
 ## 3-year horizon
 
