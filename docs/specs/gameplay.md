@@ -4,14 +4,23 @@
 
 ## Skills (`modules/skills/`)
 
-Morrowind / Fallout-style classless progression:
+Fallout 1/2/NV-style classless progression — **point-buy on level-up, not use-leveling**:
 
-- Per-skill XP accumulation from use
-- Level-ups derived from skill milestones (not class)
-- Skill values clamp at species/perk caps
-- Skill checks via roll-vs-target
+- **XP is event-driven**, not action-driven. Quests, combat kills, exploration milestones, and other event-bus signals grant XP. Repeatedly performing a skill action does **not** train it.
+- XP accumulates against the player's overall level. On level-up the player receives a pool of **skill points** to spend on individual skills (the Fallout "skills get to be purchased" model).
+- **Tagged skills** — 3 chosen at character creation — are **discounted** per the classic Fallout 1/2 rule: spending 1 skill point on a tagged skill grants **+2 skill value** (below the 100 cap); spending 1 point on an untagged skill grants **+1**. Same point pool, double yield → half the effective cost.
+- Above 100 (if the per-game cap allows): cost-escalation is **not** modeled in v1 (NV's flat / F2's escalating rules are per-project additions via TOML, not first-party).
+- NOT the New Vegas +15-at-start model.
+- Skill values clamp at species/perk caps (Fallout convention: 1–100 internal scale).
+- Skill checks via roll-vs-target — same as Fallout's percentile-vs-target rolls.
 
-Data: skill definitions in TOML (`<project>/assets/data/skills/*.toml`).
+**Not Morrowind/Skyrim use-leveling.** Earlier wording in this spec called the model "use-leveling"; that wording was an error and is superseded by this section. Per [project memory](#) `project-skill-progression-fallout-style` (2026-05-25).
+
+Data: skill definitions in TOML (`<project>/assets/data/skills/*.toml`). Per-character runtime state (current value + tagged set + points pool) is ECS-component data, persisted in the save delta.
+
+### Target-game divergence
+
+Daggerfall is one of the four target games and famously uses use-leveling. The first-party `modules/skills/` exposes the Fallout-style API; a Daggerfall-mod project replaces the XP grant source via TOML config (or by ships its own `modules/skills_daggerfall/`). The engine module does not implement use-leveling.
 
 ## Perks (`modules/perks/`)
 
