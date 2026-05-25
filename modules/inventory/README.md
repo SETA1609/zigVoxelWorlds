@@ -10,6 +10,7 @@
 - Stacking rules (max stack per item, partial stacks)
 - Encumbrance — weight / volume budget; affects movement speed
 - Quickbar binding — stable item references for the UI quickbar (see [`specs/ui.md` § Quickbar](../../docs/specs/ui.md))
+- **Tool stats** for the voxel mining model (per project memory `project-voxel-hardness-mining`): each tool item declares `mining_speed_multiplier`, `tool_class` (pickaxe/axe/shovel/scythe/hand), `tier` (0=hand, 1=wood, …, 4=diamond), `durability`. The voxel server reads these when evaluating mining progress.
 
 ## Slot binding rules
 

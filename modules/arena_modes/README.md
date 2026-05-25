@@ -28,12 +28,15 @@ The Megabonk inspiration does **NOT** live in:
 - **Last-N-standing win condition** + match-end summary
 - **Configurable max-players per match** — driven by `project.toml` `[multiplayer] max_players` (per project memory `project-target-games-and-save-model`)
 - **Match → XP grant** — match-end, kills, and survival milestones dispatched onto the event bus; `modules/skills/` (Fallout-style XP) listens
-- **Limited voxel editing — Minecraft-HG style:**
-  - Trees destroyable with hands; tagged-destructible stones with pickaxe
+- **Limited voxel editing — Minecraft-HG style with hardness:**
+  - Hands destroy: soil, sand, trees, grass (low hardness, no tool-tier required)
+  - Pickaxe destroys: tagged-destructible stones (with speed bonus per the `effective_tool_class` system)
+  - All destruction uses the engine's hardness + tool-tier model in `modules/voxel_core/` — see project memory `project-voxel-hardness-mining`
+  - 10-stage break overlay (Minecraft pattern) renders during mining
   - **Y-axis restricted:** only voxels at `y > ground_level` are editable. Arena floor (`y ≤ ground_level`) is read-only — **no mining downward**.
-  - Players can also **place blocks** for cover / structures
-  - Implemented via the engine's edit-policy compositor: `coord_range_allowlist(y > ground)` + `tag_allowlist(destructible)` + `script(storm_boundary)` evaluated per voxel mutation
-  - **Server-authoritative** in PvP mode — clients cannot fake destruction or placement
+  - Players can also **place blocks** for cover / structures (destroyed blocks return to inventory)
+  - Implemented via the engine's edit-policy compositor: `coord_range_allowlist(y > ground)` + `tag_allowlist(destructible)` + `script(storm_boundary)` evaluated per voxel mutation, ahead of the hardness check
+  - **Server-authoritative** in PvP mode — clients cannot fake destruction, placement, or mining progress
 
 ## What it does NOT provide (delegated to other modules)
 

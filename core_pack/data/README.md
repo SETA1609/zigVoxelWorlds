@@ -26,7 +26,9 @@ core_pack/data/
 │       ├── white/      # holy (banish_undead, sanctify, divine_heal, …)
 │       └── black/      # necromancy (raise_dead, life_drain, curse, …)
 ├── recipes/            # crafting recipe seeds
-└── items/              # baseline item definitions (weapons, armor, ingredients, …)
+├── items/              # baseline item definitions (weapons, armor, ingredients, …)
+│   └── tools/          # mining tools (pickaxe/axe/shovel/scythe tiers) with mining_speed_multiplier + tool_class + tier + durability per project memory `project-voxel-hardness-mining`
+└── voxels/             # voxel-type definitions with hardness + tool_tier_required + effective_tool_class + drops (per project memory `project-voxel-hardness-mining`)
 ```
 
 ## Schemas

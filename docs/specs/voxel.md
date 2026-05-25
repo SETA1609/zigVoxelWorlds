@@ -102,6 +102,87 @@ Meshified chunks live in a separate pool tracked by [`gaps.md` § 2.2.H](../gaps
 - Mesh-form chunk pool: scales with the world's static region count; ~2,000 chunks × 12 KB = ~24 MB
 - Total chunk-related memory ~30 MB on iGPU — well within the 3.5 GB budget
 
+## Mining — hardness + tool-tier + break overlay
+
+The engine implements a Minecraft-style mining model. Every voxel-editing target uses it (arena_modes, Stardew mines, Atelier gathering, Daggerfall mining zones, rogue_tower destructible rooms). Specified 2026-05-25; see project memory `project-voxel-hardness-mining` for the full rationale.
+
+### Voxel data (TOML schema additions)
+
+Each voxel type declares mining properties alongside its existing data:
+
+```toml
+[voxel.stone]
+hardness = 1.5                  # base time-to-mine coefficient
+tool_tier_required = 1          # 0=hand, 1=wood, 2=stone, 3=iron, 4=diamond/mythic
+effective_tool_class = "pickaxe"
+drops = [
+  { item = "stone_block", chance = 1.0 }
+]
+
+[voxel.soil]
+hardness = 0.5
+tool_tier_required = 0          # hand suffices
+effective_tool_class = "shovel"  # shovel gets a speed bonus, but hand still works
+drops = [
+  { item = "dirt_block", chance = 1.0 }
+]
+```
+
+### Tool data (TOML schema additions)
+
+Each tool item declares its mining characteristics in `<project>/assets/data/items/tools/*.toml`:
+
+```toml
+[item.wooden_pickaxe]
+type = "tool"
+tool_class = "pickaxe"
+tier = 1
+mining_speed_multiplier = 2.0
+durability = 60
+```
+
+### Server-authoritative mining process
+
+1. Client sends `beginMine(voxel)` intent to the server
+2. Server validates: edit-policy passes, voxel is targetable, player has tool equipped
+3. Server tracks `progress` per (player, voxel) pair:
+
+   ```text
+   progress += dt × (tool.mining_speed_multiplier × class_bonus) / voxel.hardness
+   ```
+
+   where `class_bonus = 1.5` (tunable) if `tool.tool_class == voxel.effective_tool_class`, else 1.0
+
+4. When `progress >= 1.0`:
+   - Voxel destroyed; bulk-edit + lighting + meshing path runs as for any other edit
+   - If `tool.tier >= voxel.tool_tier_required`, drop the item into the player's inventory
+   - Else: voxel destroyed silently, no drop
+   - Tool durability decremented; tool breaks at 0
+5. Client `cancelMine()` or player target change clears the per-pair state
+
+### Replication
+
+- Mining progress: per-(player, voxel) `break_stage` integer 0–9 (10-stage break overlay, Minecraft canon)
+- Interest-managed — only clients with the chunk in view receive the stage updates
+- Final destruction replicated via the standard voxel-edit channel; meshes re-bake on receipt
+- Anti-cheat: clients never authoritatively advance progress — they predict + reconcile
+
+### Composition with edit-policy
+
+Edit-policy (binary: can edit at all?) is evaluated **before** mining. If the policy rejects the voxel, no progress is tracked. Cheap reject.
+
+The policy compositor accepts:
+
+- `coord_range_allowlist` — e.g. `y > ground_level` for arena_modes
+- `tag_allowlist` — only voxels tagged `destructible`
+- `voxel_type_allowlist` — only `ore` or `dirt` (Stardew mines)
+- `script` — defer to callback (storm-boundary mutations, quest-gated rules)
+- Composed (AND / OR) for complex per-scene rules
+
+### Render: 10-stage break overlay
+
+`backends/vulkan/` renders the standard Minecraft break-overlay quads on top of the targeted voxel face, indexed by `break_stage`. Asset: 10 textures shipping in `core_pack/assets/textures/break_stages/`.
+
 ## Open decisions (see `gaps.md`)
 
 - Chunk size (16³ / 32³ / 64³) — affects memory, meshing batch, network packet size

@@ -9,6 +9,8 @@
 - **Streaming** — load/unload chunks based on player position + interest radius
 - **Lighting** — propagation across chunk borders, sun + block lights
 - **Bulk-edit API** — multi-voxel writes that defer lighting + meshing until the batch closes (`VoxelManipulator` pattern from Luanti `src/voxel.h:24`)
+- **Hardness + mining** — Minecraft-style hardness + tool-tier + per-(player,voxel) mining-progress tracking + 10-stage break overlay. Server-authoritative in PvP. Used by every voxel-editing target. See project memory `project-voxel-hardness-mining` + [`specs/voxel.md`](../../docs/specs/voxel.md) § Mining.
+- **Edit-policy compositor** — evaluates scene/region policies (`coord_range_allowlist`, `tag_allowlist`, `script`, …) before any mutation; cheap binary reject before the hardness mechanic runs
 
 ## Reference patterns (Luanti — `engine-references.md` § Luanti)
 
