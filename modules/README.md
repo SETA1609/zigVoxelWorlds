@@ -28,7 +28,8 @@ modules/<name>/
 | [`multiplayer/`](multiplayer/README.md) | 10 | planned | Replication + interest management + lockstep stepping |
 | [`modding/`](modding/README.md) | 14 | planned | Layered mod loader + native plugin ABI + mod TOML reader |
 | [`farming/`](farming/README.md) | post-1.0 | optional | Stardew-style farming layer |
-| [`rogue_tower/`](rogue_tower/README.md) | post-1.0 | optional | Endless tower mode |
+| [`rogue_tower/`](rogue_tower/README.md) | post-1.0 | optional | Endless tower — *traditional* roguelike subgenre |
+| [`arena_modes/`](arena_modes/README.md) | 10+ | optional | Action-RPG + Hunger Games match shell (PvE / PvP) — *Megabonk-paced, Diablo-loot* hybrid (5th target) |
 
 ## Held — not in tree yet
 

@@ -10,31 +10,37 @@ That sentence is the vision. Everything below is what each piece of it means.
 
 ---
 
-## The four target games
+## The five target games
 
-Not example genres — the four concrete game shapes the engine is designed to support out of the box. **All four are voxel games** — voxel-3D rendering, first-person camera primary, no 2D fallback, no mesh-only worlds. Triangle meshes appear only as additive content (character bodies, props, decorative meshes) on top of the voxel world. Every architectural decision is evaluated against "does this serve at least one of these?"
+Not example genres — the five concrete game shapes the engine is designed to support out of the box. **All five are voxel games** — voxel-3D rendering, first-person camera primary, no 2D fallback, no mesh-only worlds. Triangle meshes appear only as additive content (character bodies, props, decorative meshes) on top of the voxel world. Every architectural decision is evaluated against "does this serve at least one of these?"
 
-1. **Voxel Daggerfall-style open-world RPG** with Morrowind-style spellmaking
-   - Massive seamless voxel world (10 km × 10 km × 2 km vertical, scalable to 4 km vertical), procedurally generated from seed
-   - Classless skill/perk progression (Fallout/Morrowind/Daggerfall lineage)
-   - Spellmaking: combine effects, custom magic schools
-   - Mostly read-only world (towns, dungeons, terrain) with quest-state and player-progress saved
-2. **Voxel Stardew Valley** — life / farming sim
-   - Same engine, same module set + a different scene policy
-   - Voxel world, mostly read-only (town, paths, decoration)
-   - **Editable subsets** — designated farm plots, mines, owned house interiors — through the scene edit-policy system
-   - Crafting + relationships + day cycle + seasonal events
+1. **Minecraft-Hunger-Games + Megabonk-paced + Diablo-loot hybrid** — action-RPG match shell, Megabonk-inspired combat pacing, HG last-standing structure (PvE co-op or PvP FFA / teams), **limited Minecraft-style voxel editing**
+   - Players can destroy trees (hands) and tagged-destructible stones (pickaxe) **only above ground level** — the arena floor is read-only, no mining downward
+   - Players can also place blocks for cover / structures (Minecraft-HG canon)
+   - Edit policy is composed: `coord_range_allowlist(y > ground) + tag_allowlist(destructible) + script(storm_boundary)` — the engine's first real test of policy composition
+   - Concrete RPG loot drops from the shared item registry (swords / staves / potions / scrolls / magic books / pickaxe) — *not* abstract Vampire-Survivors-style stacking modifiers
+   - Configurable max-players per project; first target needing server-authoritative PvP validation + server-authoritative voxel mutations
+2. **Voxel rogue-like dungeon crawler** — endless tower (traditional roguelike subgenre)
+   - Procedurally generated voxel runs, each seed a fresh dungeon
+   - Per-run state lost on death; meta-progression persists
+   - Scene policy: dungeons fully destructible during the run, world hub read-only
 3. **Voxel Atelier-style crafting / alchemy RPG**
    - Multi-stage synthesis: gather → process → synthesize
    - Quality system derived from skill + ingredients
    - Recipe discovery
    - Voxel gathering zones with controlled editability (you can harvest, you can't reshape the cliff)
-4. **Voxel rogue-like dungeon crawler** — endless tower
-   - Procedurally generated voxel runs, each seed a fresh dungeon
-   - Per-run state lost on death; meta-progression persists
-   - Scene policy: dungeons fully destructible during the run, world hub read-only
+4. **Voxel Stardew Valley** — life / farming sim
+   - Voxel world, mostly read-only (town, paths, decoration)
+   - **Editable subsets** — designated farm plots, mines, owned house interiors — through the scene edit-policy system
+   - **Voxel building on top of crafting** (farm buildings, fences, paths, sprinkler placement) — this is what places Stardew *after* Atelier in the shipping order: Atelier needs crafting alone; Stardew needs crafting + voxel building + day/night/seasons + NPC relationships
+   - Crafting + relationships + day cycle + seasonal events
+5. **Voxel Daggerfall-style open-world RPG** with Morrowind-style spellmaking — long-term flagship
+   - Massive seamless voxel world (10 km × 10 km × 2 km vertical, scalable to 4 km vertical), procedurally generated from seed
+   - Classless skill/perk progression (Fallout-style, per [`specs/gameplay.md`](specs/gameplay.md) § Skills)
+   - Spellmaking with the 9 rainbow color schools (per [`specs/gameplay.md`](specs/gameplay.md) § Magic)
+   - Mostly read-only world (towns, dungeons, terrain) with quest-state and player-progress saved
 
-The engine is the *intersection* of what these four voxel games need. If a feature serves none of them, it isn't in scope. If a feature serves exactly one, it ships as an optional module.
+The engine is the *intersection* of what these five voxel games need. If a feature serves none of them, it isn't in scope. If a feature serves exactly one, it ships as an optional module.
 
 ---
 

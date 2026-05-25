@@ -1,6 +1,22 @@
 # `modules/multiplayer/`
 
-> Network protocols + sync + replication + interest management. Host-authoritative; 4-player co-op + 40–50p dedicated server target. Phase 10.
+> Network protocols + sync + replication + interest management. **Host-authoritative for co-op / PvE; server-authoritative for PvP.** Player count is configurable per project (`project.toml` `[multiplayer] max_players`) — no hard cap baked into the engine. Phase 10.
+
+## Player count
+
+The previous spec said "4-player co-op + 40–50p dedicated". Both numbers were assumptions inherited from the Daggerfall co-op design. Revised 2026-05-25 to support the Megabonk-Survivors + Hunger Games target (5th target — see `modules/arena_modes/`):
+
+- Daggerfall / Stardew / Atelier / traditional rogue-like: default 4-player co-op
+- Arena modes PvE co-op: configurable squad size
+- Arena modes PvP FFA / teams: scales as high as the netcode + Iris-style delta replication can sustain. Engine ceiling will be set by Phase 10 benchmarking against commodity server hardware.
+
+## Authority model
+
+| Mode | Authority | Notes |
+| --- | --- | --- |
+| Co-op (Daggerfall, Stardew, Atelier, rogue_tower) | Host-authoritative | Clients predict + reconcile against host frames |
+| PvE arena (`modules/arena_modes/` co-op) | Host-authoritative | Same model — host runs hordes + validates state |
+| **PvP arena** (`modules/arena_modes/` FFA / teams) | **Server-authoritative** | First target needing validated movement + combat resolution. Anti-cheat-grade validation added in whichever phase ships the PvP arena. |
 
 ## What it provides
 

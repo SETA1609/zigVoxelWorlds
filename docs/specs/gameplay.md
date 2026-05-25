@@ -70,7 +70,7 @@ Data: recipes in TOML; stations defined as entity types.
 
 ## Inventory (`modules/inventory/`)
 
-The quickbar (10 slots, universal across all four target games) is owned by the UI layer + lives in [`specs/ui.md`](../specs/ui.md) § Quickbar. Inventory provides the underlying item references; the quickbar slots are stable refs to inventory items.
+The quickbar (10 slots, universal across all **five** target games) is owned by the UI layer + lives in [`specs/ui.md`](../specs/ui.md) § Quickbar. Inventory provides the underlying item references; the quickbar slots are stable refs to inventory items.
 
 - Slot count, weight, stack rules, container hierarchy
 - Equipped vs carried (different slot sets per body type)
@@ -83,3 +83,13 @@ The quickbar (10 slots, universal across all four target games) is owned by the 
 - All five systems hook into the [editability policy](../ARCHITECTURE.md#cross-cutting-concerns) when actions modify the world (mining = inventory + voxel edit; spell = magic + voxel edit; crafting station = scene-fixed)
 - All five expose mod-replaceable extensions via the [stable C ABI](../engine-vs-game.md)
 - Quest system ([`gaps.md` § 3](../gaps.md)) consumes events from all five
+
+## Asset-reuse principle across all target games
+
+zVoxRealms now supports **five** target games — Daggerfall (flagship), Stardew Valley voxel, Atelier voxel, traditional rogue-like, and the **Megabonk-Survivors + Hunger Games hybrid** in `modules/arena_modes/`. The 5th target was added 2026-05-25.
+
+Critical design rule for the 5th target: **drops in arena matches are concrete RPG items from the shared item registry, NOT abstract Vampire-Survivors-style stacking modifiers.** Enchanted swords, fireball staves, potions (timed buffs), magic scrolls (one-shot spells), magic books (learn a color-magic spell permanently) are dropped from the *same* registry used in Daggerfall.
+
+The same applies to progression: arena matches grant XP via the event bus (match completion, kills, milestones), feeding into the Fallout-style `modules/skills/` + `modules/perks/`. No arena-only upgrade tree.
+
+**Honest trade-off captured here so future readers don't try to "fix" it:** this design loses Megabonk's exponential-build-curve endgame feel (you never end an arena match as a particle storm with 17 stacked multiplicative modifiers, because you're wielding *one* sword from the inventory, not 17). The arena mode plays more like *Diablo + Hunger Games* than a true Megabonk clone. The reuse win — one item registry, one skill system, one magic system, one perk system across all five targets — is the deliberate priority.
