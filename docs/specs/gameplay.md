@@ -34,11 +34,25 @@ Data: perk definitions in TOML; visual tree layout authored in the editor.
 
 ## Magic (`modules/magic/`)
 
-Morrowind-style spellmaking + Daggerfall-style schools:
+Morrowind-style spellmaking + **9 color schools** — Roy G. Biv plus White and Black — that parallel the Morrowind/Daggerfall school taxonomy in *function* but use color-coded *names*, avoiding Elder Scrolls naming entirely. See [`project-magic-rainbow-schools` memory](#) for the full mapping:
+
+| Color school | Parallel ES function |
+| --- | --- |
+| Red | Destruction (offensive damage, drains) |
+| Orange | Conjuration (summoning, bound weapons) |
+| Yellow | Illusion (light, invisibility, charm) |
+| Green | Restoration — mortal (healing, buffs, cures) |
+| Blue | Alteration (transmutation, physical change) |
+| Indigo | Thaumaturgy (force manipulation, levitation) |
+| Violet | Mysticism (soul detection/storage, mind, esoteric) |
+| **White** | Holy / Divine (protection auras, banish undead/demons, divine-grade healing, sanctify) — opposed by Black |
+| **Black** | Necromancy / Death (raise undead, life-drain, curses, soul-corruption) — opposed by White; weaponizes what Violet only detects/stores |
+
+Engine APIs and TOML keys use color names only (`red_magic`, `orange_magic`, `white_magic`, `black_magic`). The ES parallels above are design-intent commentary, not engine vocabulary.
 
 - **Effects as data** — each spell effect is a TOML-defined building block (`damage_fire`, `restore_health`, `teleport`, etc.) with magnitude / duration / target shape
 - **Spellmaking** — combine effects into a custom spell; cost derived from sum
-- **Schools** — taxonomy of effects; affinity gated by player's school skill
+- **Schools** — 9 color schools (table above: Roy G. Biv + White + Black); affinity gated by the player's color-magic skill (`red_magic`, `orange_magic`, …, `white_magic`, `black_magic`) which is a Fallout-style skill in `modules/skills/`
 - **Dynamic application** — effects can apply to entities and to the world (e.g. light areas, transmute voxels — see [editability policy](../ARCHITECTURE.md#cross-cutting-concerns))
 
 Data: effects + schools in TOML; player-made spells stored in save.
