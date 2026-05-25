@@ -136,6 +136,7 @@ C++ adapter code follows [`cpp-style.md`](cpp-style.md) — Google C++ Style Gui
 | **Dear ImGui** | <https://github.com/ocornut/imgui> | MIT | MIT | Editor / dev panels | 1 |
 | **ImGuizmo** | <https://github.com/CedricGuillemet/ImGuizmo> | MIT | MIT | 3D transform gizmos in the scene editor | 12 |
 | **imnodes** | <https://github.com/Nelarius/imnodes> | MIT | MIT | Node-graph UI for BT editor + material graph | 12 |
+| **RmlUi** | <https://github.com/mikke89/RmlUi> | MIT | MIT | **Shipped-game UI engine** — HTML-subset (RML) + CSS-subset (RCSS) runtime; behind the thin `src/ui/` Zig wrapper per [`specs/ui.md`](specs/ui.md). Bundled into a new `libs/zig-cpp-ui-stack-adapter/` sub-repo alongside FreeType (RmlUi's font backend) | 7.5 / 12 |
 | **HarfBuzz** | <https://github.com/harfbuzz/harfbuzz> | MIT | MIT | Complex-script text shaping (CJK, Arabic, Devanagari) | 7.5 |
 | **msdfgen** | <https://github.com/Chlumsky/msdfgen> | MIT | MIT | Multi-channel SDF font atlas generation (editor-time) | 7.5 / 12 |
 | **msdf-atlas-gen** | <https://github.com/Chlumsky/msdf-atlas-gen> | MIT | MIT | Atlas packing on top of msdfgen (editor-time only) | 12 |
@@ -256,7 +257,7 @@ A pure-C library moves from §2 to §4 when **two or more** of the following hol
 
 | Library | License | Why §4 not §2 | Future |
 | --- | --- | --- | --- |
-| _(no current entries — GLFW used to live here; it now sits inside the Platform-stack adapter as its v0 backend, see §3)_ | | | |
+| *(no current entries — GLFW used to live here; it now sits inside the Platform-stack adapter as its v0 backend, see §3)* | | | |
 
 Default to §2 unless the criteria above are clearly met. Don't pre-emptively wrap "just in case" — that's premature abstraction. §4 is intentionally narrow — most libs route through §2 or §3.
 

@@ -4,7 +4,52 @@
 
 ## Scope
 
-A declarative UI engine driven by TOML layout + SCSS styling (per [`tech-stack.md`](../tech-stack.md) § UI). Renders through `RenderServer` like everything else. Editor-time editing via a dedicated UI panel in `src/editor/panels/ui_designer/` (Phase 12).
+A declarative UI engine for shipped games — HUDs, menus, dialog, inventory. Renders through `RenderServer` like everything else. Editor-time editing via a dedicated UI panel in `src/editor/panels/ui_designer/` (Phase 12).
+
+## v1 implementation: RmlUi behind the UI-stack adapter
+
+**Decision (Phase 0):** v1 ships [RmlUi](https://github.com/mikke89/RmlUi) (MIT) as the runtime UI engine. The wrapper that hides RmlUi specifics lives in `libs/zig-cpp-ui-stack-adapter/` (planned submodule), **not** in `src/ui/`. This is the same decoupling pattern the project uses for every other C++ dependency (Vulkan, Platform, …) — see [`external-libs-catalog.md` § 3](../external-libs-catalog.md).
+
+### Two-layer split
+
+```text
+┌───────────────────────────────────────────────────────────────┐
+│ src/ui/                                                       │
+│ ───────                                                       │
+│ Thin Zig API the engine + gameplay code calls.                │
+│ Just typed bindings to the adapter's C ABI + engine glue      │
+│ (i18n mustache, asset-DB hooks, gamepad input routing).       │
+│ Knows the C ABI. Does NOT know about RmlUi.                   │
+└─────────────────────┬─────────────────────────────────────────┘
+                      │ stable C ABI: zvui_document_load, …
+                      ▼
+┌───────────────────────────────────────────────────────────────┐
+│ libs/zig-cpp-ui-stack-adapter/                                │
+│ ──────────────────────────────                                │
+│ The actual wrapper.                                           │
+│   - RmlUi vendored as the backend lib                         │
+│   - FreeType bundled (RmlUi's glyph backend)                  │
+│   - C++ binding layer translating RmlUi types ↔ C ABI         │
+│   - The only code that #includes <RmlUi/...>                  │
+│ Distributed as its own repo, owns its build.zig + LICENSE.    │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Why this split
+
+- **Swapping to a future native impl is a libs adapter change, not an engine change.** Replace `libs/zig-cpp-ui-stack-adapter/`'s implementation with native code (or another lib like Yoga, RmlUi successor, etc.); the C ABI stays; `src/ui/` doesn't recompile.
+- **No `<RmlUi/*>` headers anywhere in `zigVoxelWorlds/`** — they live exclusively inside the adapter sub-repo. The engine tree never sees them. Same discipline as Vulkan + Jolt.
+- **The adapter's `LICENSE` is its own** — RmlUi MIT obligations are tracked in `libs/zig-cpp-ui-stack-adapter/LICENSE`, not at the engine root. Standard per [`external-libs-catalog.md` § 3](../external-libs-catalog.md).
+
+### Why RmlUi over custom TOML+SCSS
+
+- Style cascade + transitions + animations + flex layout = ~5–7k LoC of engine code that RmlUi already ships solid.
+- Mod authors get HTML/RCSS (a well-known mental model) instead of a bespoke TOML/SCSS dialect with no IDE support.
+- Off-ramp stays open: replace the adapter's contents, not the engine's.
+
+**Out of scope for v1:** writing a custom TOML+SCSS parser, custom layout engine, custom style resolver. Re-evaluate at end of Phase 12 — see [§ Off-ramp](#off-ramp-to-a-native-implementation).
+
+The sections below describe the **engine-visible UI contract** — anchor layout, widget set, focus graph, quickbar behavior. They're written in implementation-neutral terms so the contract survives a future adapter swap.
 
 ## Layout model
 
@@ -35,62 +80,86 @@ Anchor-based (Godot Control style), not constraint-based (Auto Layout style):
 | `ProgressBar` | filled portion of width |
 | `Tooltip` | hover-shown info |
 
-Custom widgets register via the C ABI for mods.
+Custom widgets register via the C ABI for mods. Internally these map to RmlUi `Core::ElementInstancer` factories registered through the wrapper.
 
-## TOML schema (example)
+## RML markup (example)
 
-```toml
-[hud.health_bar]
-type = "ProgressBar"
-anchor = [0.0, 0.0]
-offset = [16, 16]
-size = [200, 24]
-style_class = "hud-bar health"
-value_bind = "player.health_pct"
+Source file: `<project>/assets/ui/hud.rml`. Loaded via `Ui.Document.load("hud.rml")` from the Zig wrapper.
 
-[menu.start_button]
-type = "Button"
-anchor = [0.5, 0.5]
-text = "tr:ui.menu.start"   # localized string
-on_click = "menu.start_game"
-focus_neighbors = { up = "load_button", down = "settings_button" }
+```rml
+<rml>
+  <head>
+    <link type="text/rcss" href="hud.rcss"/>
+  </head>
+  <body id="hud">
+    <progressbar id="health_bar"
+                 class="hud-bar health"
+                 data-attr-value="player.health_pct"/>
+
+    <div id="start_menu">
+      <button id="start_button"
+              focus-up="load_button" focus-down="settings_button"
+              onclick="menu.start_game()">
+        {{tr:ui.menu.start}}
+      </button>
+    </div>
+  </body>
+</rml>
 ```
 
-## SCSS styling
+**i18n note.** `{{tr:ui.menu.start}}` is the RML call-site syntax — the markup equivalent of `t("ui.menu.start")` in Zig code (see [`localization.md`](localization.md) § Code idiom). The UI-stack adapter intercepts the mustache during document load, looks the key up in the compiled gettext catalog, and substitutes the localized string before RmlUi sees the element text. **The translation format is gettext PO**, not i18next or i18next-style JSON — see [`localization.md`](localization.md), which explicitly rejects a TOML middle layer.
 
-Standard SCSS subset, compiled to a flat style-rule table at import time:
+The `{{tr:…}}` syntax exists only so RML authors don't have to wire data-bindings for every translatable label; it does not introduce a parallel i18n system. RmlUi's own `data-bind`/`data-attr-*` is exposed through the wrapper's `Element.bindAttr()` for runtime-changing values (health %, score, etc.).
 
-```scss
+## RCSS styling
+
+Standard RCSS — CSS 2.1 plus most of CSS3, parsed by RmlUi. Source file: `<project>/assets/ui/hud.rcss`.
+
+```rcss
 .hud-bar {
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 4px;
-  &.health { fill: $color-health; }
-  &.mana   { fill: $color-mana; }
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    width: 200px; height: 24px;
 }
+.hud-bar.health { image-color: #c44; }
+.hud-bar.mana   { image-color: #44c; }
 
-.hud-bar:hover { border: 2px solid #fff; }
+.hud-bar:hover { border: 2px #fff; }
+
+button {
+    transition: background-color 120ms;
+}
+button:focused { background-color: rgba(255, 255, 255, 0.15); }
 ```
 
-Pseudo-states: `:hover`, `:pressed`, `:focused`, `:disabled`.
+Pseudo-states supported: `:hover`, `:active` (= "pressed"), `:focus`, `:checked`, `:disabled`, `:nth-child(...)`. Transitions + keyframe animations are RCSS-native — no engine work.
+
+**RCSS subset policy:** the wrapper does not restrict RCSS syntax — anything RmlUi parses, modders can write. The engine does not promise the full set survives a future native swap; mod authors targeting that future should stick to the subset documented in `docs/specs/ui-rcss-subset.md` (TBD before Phase 12 ships).
 
 ## Focus graph (controller nav)
 
-Every focusable widget declares its `focus_neighbors = { up, down, left, right }`. Stick / D-pad moves focus along these edges. Critical for the four target games — Stardew + Atelier are very controller-driven.
+Every focusable widget declares its focus neighbors via the `focus-up` / `focus-down` / `focus-left` / `focus-right` attributes (RmlUi's `tab-index` + the wrapper's added attributes). Stick / D-pad moves focus along these edges. Critical for the four target games — Stardew + Atelier are very controller-driven.
+
+The wrapper intercepts gamepad input from `platform/` and dispatches it as RmlUi focus events; modders see a stable Zig API rather than RmlUi's raw event system.
 
 ## Font subsystem
 
-- FreeType (via adapter sub-repo) for glyph rasterization
-- Atlas-based — text rendered as quads with UV into a generated atlas
-- Per-locale fallback chain (English Latin → CJK glyph fallback for Chinese/Japanese chars)
-- DPI scaling: design-time pixels, runtime scaled by display DPI + user font-size setting
+RmlUi's bundled FreeType backend handles glyph rasterization + atlasing. The wrapper:
+
+- Configures the per-locale fallback chain (English Latin → CJK fallback for Chinese/Japanese)
+- Wires DPI scaling — design-time pixels in RCSS, runtime scaled by display DPI + user font-size setting
+- Loads font assets through the engine's asset DB (`<project>/assets/.assetdb.toml` → GUID), not RmlUi's filesystem lookup, so fonts respect the mod-loader layered FS
+
+No HarfBuzz in v1 (RmlUi's FreeType backend is enough for Latin + CJK without complex shaping). Add later if Arabic/Devanagari/etc. become first-class.
 
 ## Borrowed patterns
 
 [`gap-references.md` § 2.1.D](../gap-references.md):
 
-- Godot's `Control` anchor + offset system — directly applicable
-- Godot's per-widget files (`button.cpp`, `label.cpp`) — read for widget behavior contracts
-- Luanti's formspec DSL — TOML schema philosophy: declarative, parseable, hot-reloadable
+- **RmlUi** as the engine — production-tested HTML/CSS-subset UI runtime (Bohemia, Frontier shipped titles)
+- Godot's `Control` anchor + offset model — *concept already implemented inside RmlUi* via `position` + `top/left/right/bottom`; we adopt the model by using RmlUi
+- Godot's per-widget files (`button.cpp`, `label.cpp`) — read only for *behavior contracts* we expose in our wrapper (focus-neighbor semantics, modal stacking, list-of-tooltips rules)
+- Luanti's formspec DSL — informed the *moddable-data* philosophy; RML files in the mod-loader layered FS deliver the same property
 - Skip Slate (Unreal) — too heavy
 
 ## Quickbar — shared across all four target games
@@ -216,12 +285,32 @@ UI tweens are CPU-cheap (single-property lerps); total UI tween cost target < 0.
 
 Adaptation rule per [`engine-references.md` § Legal](../engine-references.md): study Godot's Tween API surface, close the source, implement in Zig.
 
+## Off-ramp to a native implementation
+
+The wrapper is the contract; RmlUi is an implementation detail. A future native impl (`backends/ui/native/`) could replace RmlUi if:
+
+- RmlUi upstream stalls or relicenses
+- Shipped-binary size or per-frame cost becomes a problem on the target hardware (i3 + iGPU)
+- The C ABI boundary at the wrapper proves too narrow for an ambition we want to add (custom shaders per element, GPU-driven layout, voxel-aware widget composition, …)
+
+**Evaluation gate:** end of Phase 12. If RmlUi is meeting needs, leave it. If two or more of the triggers above are firing, schedule a native impl as a Phase-13+ R&D track.
+
+**Discipline to keep the off-ramp viable:**
+
+- Engine and gameplay code call only the Zig wrapper, never RmlUi types directly
+- The wrapper does not leak `Rml::Element*` or `Rml::Context*` across its API
+- RML/RCSS files live under `<project>/assets/ui/` and are loaded via the wrapper's `Document.load(guid)` — never via RmlUi's filesystem
+- Mod-author docs reference the wrapper Zig API, not RmlUi types
+
+If those four rules hold, swapping the backend is a wrapper-implementation change, not a content-author break.
+
 ## Open decisions
 
-- Renderer integration: in-game UI as its own render pass, or composited with scene?
+- Renderer integration: in-game UI as its own render pass, or composited with scene? (RmlUi exposes a `RenderInterface` we implement against `render_server`.)
 - Localization-aware text wrapping (CJK, RTL — see [`specs/localization.md`](localization.md))
 - Touch support (Android) — defer until Android port phase
 - Theme switching at runtime (light/dark/high-contrast for accessibility — see [`specs/accessibility.md`](accessibility.md))
+- Mod-author RCSS subset documentation — produce `docs/specs/ui-rcss-subset.md` before Phase 12 ships
 
 ## Milestone
 
