@@ -2,7 +2,7 @@
 
 > Scope: [`vision.md`](vision.md) + [`mission.md`](mission.md). Layers: [`ARCHITECTURE.md`](ARCHITECTURE.md). Stack: [`tech-stack.md`](tech-stack.md). Adapters: [`external-libs-catalog.md`](external-libs-catalog.md). Borrowed patterns: [`engine-references.md`](engine-references.md).
 >
-> ⚠ **Current vs target.** The layout below is the **target** for Phase 0 completion. On disk today, the repo contains only the stub layout (`src/main.zig` + `src/c/` + `src/cpp/` hello-world) inherited from the build template. Closing Phase 0 means creating `src/core/`, `src/servers/`, `src/backends/`, `src/scene/`, `src/platform/`, `modules/`, and the editor / project-manager / importers / export subtrees as documented below — even if most start empty.
+> ⚠ **Current vs target.** The layout below is the **target** for Phase 0 completion. On disk today, the repo contains only the stub layout (`src/main.zig` + `src/c/` + `src/cpp/` hello-world) inherited from the build template, plus two existing C++-stack adapter submodules under `libs/`. Closing Phase 0 means creating `src/core/`, `src/servers/`, `src/backends/`, `src/scene/`, `src/platform/`, `src/ui/`, `src/project_manager/`, `src/editor/` (with `panels/`, `code_editor/`, `script_builder/`, `hot_reload/`, `import/`, `export/`), `modules/`, `core_pack/`, and `tests/` as documented below — even if most start empty. Adapters live in `libs/` as per-stack git submodules; per-stack contents are catalogued in [`external-libs-catalog.md`](external-libs-catalog.md).
 
 The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHITECTURE.md):
 
@@ -64,39 +64,40 @@ The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHI
 │   │   ├── ecs/                 # Archetype ECS
 │   │   └── orchestrator.zig     # orchestrator.toml loader, scene instancing
 │   ├── platform/                # Window, input, file I/O, threading, process spawning (std.process.Child)
-│   ├── ui/                      # Runtime UI: TOML layout + SCSS styling
+│   ├── ui/                      # Runtime UI: thin Zig API; the RmlUi-aware wrapper lives in libs/zig-cpp-ui-stack-adapter/ (see specs/ui.md)
 │   ├── project_manager/         # editor-only; opens at startup when no --project given
 │   │   ├── pm_window.zig
 │   │   ├── project_list.zig     # ports Godot ProjectList::Item
 │   │   └── project_create.zig
-│   ├── editor/                  # editor-only; ImGui panels, gizmos, viewport, hot-reload host
-│   │   ├── editor_layer.zig
-│   │   ├── viewport.zig
-│   │   ├── panels/
-│   │   │   ├── voxel_brush.zig
-│   │   │   ├── biome_painter.zig
-│   │   │   ├── scene_browser.zig
-│   │   │   ├── entity_spawner.zig
-│   │   │   ├── skill_editor.zig
-│   │   │   ├── recipe_editor.zig
-│   │   │   └── asset_browser.zig
-│   │   ├── code_editor/         # Embedded Neovim host (msgpack-RPC); ImGui fallback if nvim missing
-│   │   ├── script_builder/      # Watches <project>/scripts/, invokes zig build-lib / zig c++ -shared
-│   │   └── hot_reload/
-│   ├── export/                  # editor-only; build a per-project libzvox-runtime.{so,dll} + PCK
-│   │   ├── tree_shake.zig       # resolves enabled modules from project.toml
-│   │   ├── link.zig             # invokes zig build-lib -dynamic
-│   │   ├── pack.zig             # PCK writer (Godot-style magic + dir + blobs)
-│   │   └── launcher_template/   # tiny stub that loads libzvox-runtime + PCK
-│   ├── importers/               # editor-only; asset pipeline (PNG→KTX2, glTF→mesh, .vox→voxel, etc.)
-│   │   ├── texture.zig
-│   │   ├── mesh.zig
-│   │   ├── voxel_model.zig
-│   │   ├── audio.zig
-│   │   ├── shader.zig
-│   │   └── data.zig             # TOML game data → validated cached binary
-│   ├── modding/                 # Layered loader, native plugin ABI, mod TOML reader
-│   └── tools/                   # Standalone CLI: --dump-save, --validate-mod, --bake-assets
+│   └── editor/                  # editor-only; ImGui panels, gizmos, viewport, hot-reload host, importers, export
+│       ├── editor_layer.zig
+│       ├── viewport.zig
+│       ├── panels/
+│       │   ├── voxel_brush.zig
+│       │   ├── biome_painter.zig
+│       │   ├── scene_browser.zig
+│       │   ├── entity_spawner.zig
+│       │   ├── skill_editor.zig
+│       │   ├── recipe_editor.zig
+│       │   └── asset_browser.zig
+│       ├── code_editor/         # Embedded Neovim host (msgpack-RPC); ImGui fallback if nvim missing
+│       ├── script_builder/      # Watches <project>/scripts/, invokes zig build-lib / zig c++ -shared
+│       ├── hot_reload/
+│       ├── import/              # Asset pipeline (PNG→KTX2, glTF→mesh, .vox→voxel, etc.)
+│       │   ├── texture.zig
+│       │   ├── mesh.zig
+│       │   ├── voxel_model.zig
+│       │   ├── audio.zig
+│       │   ├── shader.zig
+│       │   └── data.zig         # TOML game data → validated cached binary
+│       └── export/              # Per-project libzvox-runtime.{so,dll} + PCK build pipeline
+│           ├── tree_shake.zig   # resolves enabled modules from project.toml
+│           ├── link.zig         # invokes zig build-lib -dynamic
+│           ├── pack.zig         # PCK writer (Godot-style magic + dir + blobs)
+│           └── launcher_template/   # tiny stub that loads libzvox-runtime + PCK
+│   # CLI utilities (--dump-save, --validate-mod, --bake-assets) are dispatched
+│   # from main.zig by flag, not a separate src/tools/ subtree. Keeps the
+│   # engine-as-app single-binary model from `engine-references.md` intact.
 │
 ├── modules/                     # Init level 2/3: pluggable subsystems (Godot modules/ pattern)
 │   ├── voxel_core/              # Chunk + meshing + streaming + lighting
@@ -114,25 +115,27 @@ The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHI
 │   ├── inventory/
 │   ├── ai/
 │   ├── multiplayer/             # Network protocols + sync — depends on net_server + scene
+│   ├── modding/                 # Layered loader, native plugin ABI, mod TOML reader
 │   ├── farming/                 # Stardew-style — optional
-│   ├── rogue_tower/             # Endless tower — optional
-│   └── steam/                   # Steamworks + Workshop, only built with -Dsteam=true
+│   └── rogue_tower/             # Endless tower — optional
+│   # modules/steam/ is intentionally absent until the Steamworks SDK
+│   # redistribution terms are reviewed (see modules/README.md). Likely
+│   # destination: libs/zig-cpp-steam-stack-adapter/ (C ABI only) +
+│   # gameplay-side logic in a separate private repo.
 │
-├── adapters/                    # Each C/C++ lib gets its own adapter sub-project (see external-libs-catalog.md)
-│   ├── vulkan/                  # Volk + VMA wrapper
-│   ├── glfw/
-│   ├── imgui/
-│   ├── jolt/
-│   ├── toml/
-│   ├── cgltf/
-│   ├── ktx2/
-│   ├── glslang/
-│   ├── enet/                    # OR gamenetworkingsockets/
-│   ├── steamworks/              # Conditional
-│   ├── miniaudio/
-│   ├── tracy/
-│   ├── zstd/
-│   └── flatbuffers/             # OR capnproto/
+├── libs/                        # External C/C++ stacks, each a git submodule with its own build.zig
+│   ├── zig-cpp-platform-stack-adapter/   # GLFW + windowing + input (existing submodule)
+│   ├── zig-cpp-vulkan-stack-adapter/     # Volk + VMA + glslang (existing submodule)
+│   ├── zig-cpp-physics-stack-adapter/    # Jolt (future)
+│   ├── zig-cpp-audio-stack-adapter/      # miniaudio (future)
+│   ├── zig-cpp-net-stack-adapter/        # ENet or GNS (future)
+│   ├── zig-cpp-asset-stack-adapter/      # cgltf + KTX2 + zstd (future)
+│   ├── zig-cpp-data-stack-adapter/       # toml++ + flatbuffers/capnproto (future)
+│   ├── zig-cpp-ui-stack-adapter/         # ImGui (future)
+│   └── zig-cpp-tracy-stack-adapter/      # Tracy (future)
+│   # Per-stack granularity (not one-dir-per-lib) keeps related C/C++ deps
+│   # behind a single stable C ABI surface. See external-libs-catalog.md
+│   # for which libs land in which stack.
 │
 ├── core_pack/                   # Base game content (ships with engine, distributed as a project template)
 │   ├── project.toml
@@ -198,7 +201,7 @@ modules/<name>/
 - **Errors via Zig error sets.** No discarded errors at boundaries.
 - **Tests next to source.** `foo.zig` keeps its tests in the same file with `test "name" { ... }`. Integration tests live in `tests/`.
 - **Hot paths don't parse text.** TOML is parsed at import time and cached as binary. Runtime loads the cached binary.
-- **Layering**: `core/` → `servers/` + `backends/` → `scene/` → `modules/<name>/` → `editor/` + `project_manager/` + `export/` + `importers/`. Lower layers never depend on higher ones. `build.zig` enforces this with an import-graph check.
+- **Layering**: `core/` → `servers/` + `backends/` → `scene/` → `modules/<name>/` → `project_manager/` + `editor/` (which contains `import/`, `export/`, `panels/`, …). Lower layers never depend on higher ones. `build.zig` enforces this with an import-graph check.
 - **Handles only at the scene boundary.** Scene/gameplay code stores `Handle` (u64). Vulkan/Jolt/audio objects live only inside their `servers/` + `backends/` pair.
 - **GUIDs over paths in assets.** Inside `<project>/assets/.assetdb.toml`, every source asset has a stable GUID. All TOML references (scenes, recipes, mod data) point at GUIDs, never paths.
 
@@ -210,12 +213,14 @@ modules/<name>/
 | New engine subsystem (e.g. weather, traffic) | `modules/<name>/` |
 | New skill or perk | `<project>/assets/data/skills/foo.toml` (data-driven) |
 | New magic effect type | `modules/magic/src/` (logic) + `<project>/assets/data/spells/` (definitions) |
-| New importer for a file type | `src/importers/<type>.zig` |
+| New importer for a file type | `src/editor/import/<type>.zig` |
 | New editor panel | `src/editor/panels/<panel>.zig` |
 | New module-specific editor panel | `modules/<name>/editor/<panel>.zig` |
-| Wrapping a new C/C++ lib | `adapters/<name>/` + entry in [`external-libs-catalog.md`](external-libs-catalog.md) |
+| Wrapping a new C/C++ lib | the appropriate `libs/zig-cpp-<stack>-adapter/` submodule + entry in [`external-libs-catalog.md`](external-libs-catalog.md) |
 | New native mod-side system | `<project>/mods/<mod>/plugin/` against the stable C ABI |
 | Project Manager UI | `src/project_manager/` |
-| Export pipeline logic | `src/export/` |
+| Export pipeline logic | `src/editor/export/` |
+| New CLI subcommand | new branch in `main.zig` dispatch (no separate `src/tools/`) |
+| Mod-loader / mod-API changes | `modules/modding/` |
 
 Next step: finish Phase 0 docs, then begin Phase 1 (Vulkan foundation) per [`ROADMAP.md`](ROADMAP.md).
