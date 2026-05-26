@@ -146,7 +146,35 @@ The modkit contains:
 
 Modders open a modkit in the editor's "New Mod Project" flow; the editor uses the modkit to populate autocomplete, validate references, and produce mods compatible with that game version.
 
-**Proprietary IP preserved.** The modkit does **not** ship core-mod source scripts. It ships the *interface* (IDs, signatures, headers) — not the *implementation*. Same model as Bethesda's Creation Kit: enables compatible mods without exposing game code.
+### Proprietary IP boundary — hard rule
+
+The modkit ships the **interface** (IDs, headers, content schema). The modkit MUST NOT ship the game's source code. Same model as Bethesda's Creation Kit, Source SDK, and Unreal's modding tools — modders extend the game's API surface, they don't read its implementation.
+
+| Artifact | In modkit? | In the shipped game install? | Notes |
+| --- | --- | --- | --- |
+| Game's Zig / C++ source files (`*.zig`, `*.cpp`, `*.h`) | ❌ never | ❌ never | Only compiled into binaries |
+| Game's compiled `libzvox-runtime.{so,dll}` | ❌ | ✅ (runtime needs it) | Opaque machine code; reverse-engineerable with effort but not source. Standard for every shipped game. |
+| Game's PCK (baked TOML data + assets) | ❌ | ✅ (runtime loads it) | Modders WITH the game installed can read the PCK's TOML to reference content IDs. **Intentional** — mods need to know existing IDs to extend them. Equivalent to Skyrim modders reading the vanilla ESM. |
+| `modkit.toml` (engine + ABI versions, registered content ID list) | ✅ | ✅ | Public interface |
+| `headers/` (C ABI signatures, struct layouts) | ✅ | ✅ | Public interface |
+| `sample_mod/` (hello-world template) | ✅ | ✅ | Trivial; no IP |
+| The game's mod-author docs | ✅ | ✅ | Generated from the headers |
+
+**The export step (`src/editor/export/`) must NEVER include `.zig` / `.cpp` / `.h` / `.zon` source files in any export artifact** — modkit or PCK or otherwise. This is a build-time check the export tool enforces; if source files end up in a packaged artifact, the export fails loudly. Same protection as the existing "no editor code in runtime build" check.
+
+What modders CAN see (and is fine for them to see):
+
+- Public C ABI surface — they need it to call into the game
+- Registered content IDs — they need to reference existing voxel types, items, spells, recipes
+- Engine source on GitHub (Apache 2.0) — the engine itself is open source; only the *game's* source stays private
+
+What modders CANNOT see:
+
+- The game's gameplay logic source (combat formulas, AI decision trees, quest scripts written by the publisher)
+- The game's content-authoring scripts (export-time data transforms, asset import pipelines that contain proprietary processing)
+- Publisher signing keys (private key never leaves the publisher's secure environment per `specs/mod-manager.md` § Signing pipeline)
+
+This is the standard separation enabling compatible mods without exposing the game's source IP.
 
 **Free distribution.** Modkit ships free with the game (Steam download includes both). Engine is already Apache 2.0 (free). Third-party modders need no commercial license to make mods.
 

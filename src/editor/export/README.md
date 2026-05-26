@@ -6,6 +6,8 @@
 
 - `tree_shake.zig` — read `project.toml`, walk `modules/<name>/config.zig` to resolve transitive deps + the comptime-enabled set
 - `sign_inject.zig` — read `<project>/publisher.pub`, inline its bytes as `const PROJECT_PUBKEY: [32]u8 = …;` into the generated launcher source before compilation. This bakes the project's Ed25519 trust root into the launcher binary; each exported game gets its own pubkey. See [`specs/mod-manager.md`](../../../docs/specs/mod-manager.md) § Signing pipeline + project memory `project-mod-runtime-two-tier`.
+- `ip_guard.zig` — build-time check that NO `.zig` / `.cpp` / `.c` / `.h` / `.hpp` / `.zon` source files appear in any export artifact (launcher binary content + PCK content + modkit content). If source leaks into a packaged artifact, the export fails loudly with the file path. Enforces the proprietary-IP boundary documented in [`engine-vs-game.md`](../../../docs/engine-vs-game.md) § Proprietary IP boundary.
+- `modkit.zig` — generate the modkit (`modkit.toml`, `headers/`, `sample_mod/`, content-ID list) alongside the launcher. Modkit ships free with the game; gives modders the public interface without exposing source.
 - `link.zig` — invoke `zig build-lib -dynamic` over the tree-shaken module set + the engine runtime
 - `pack.zig` — PCK writer (Godot-style magic `0x43504447` + flat directory + blobs); see [`engine-references.md`](../../../docs/engine-references.md) § Godot · Export — PCK three-location loader
 - [`launcher_template/`](launcher_template/README.md) — the tiny stub binary copied next to the built lib + PCK (after `sign_inject` writes the pubkey into it)
