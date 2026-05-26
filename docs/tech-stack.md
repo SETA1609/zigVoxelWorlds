@@ -27,8 +27,10 @@ If a Zig-native option exists and is roughly comparable, prefer Zig.
 
 ## Windowing & Input
 
-- **GLFW** via C wrapper to start.
-- Long-term goal: replace with a pure Zig platform layer (X11 / Wayland / Win32 / Android) once needs are clearer.
+- **SDL3** via the `libs/zig-cpp-platform-stack-adapter/` adapter (decision 2026-05-26 — see [`specs/platform.md`](specs/platform.md) and project memory `project-platform-backend-sdl3`).
+- Backend chosen for Android + Steam Deck + future Switch coverage. GLFW was the earlier choice; dropped because no Android support and weaker Wayland / Steam-Input integration.
+- The pure-Zig native v1.x migration is **withdrawn**. Maintaining native X11 / Wayland / Win32 / Android backends in pure Zig was always aspirational for a solo team; SDL3 already covers all those platforms with shipped reliability.
+- The platform-stack adapter scope expands to include: window + events + input + time + file I/O + native handle getters (as before) **plus** SDL3-provided gamepad (Steam Input mapping), sensor (Steam Deck gyro / mobile IMU), haptic (rumble), clipboard, filesystem paths (XDG / FOLDERID / NSDirectory / Android internal storage), power info, and IME / text input. These fold in for free; they would have been per-OS code otherwise.
 
 ## Math
 
@@ -199,7 +201,7 @@ Embedded **libghostty** as the text-stream rendering surface, with an engine-sid
 
 ## Future Considerations
 
-- Pure Zig platform layer (replace GLFW).
+- ~~Pure Zig platform layer (replace GLFW).~~ *Withdrawn 2026-05-26: SDL3 adopted instead — see § Windowing & Input.*
 - Custom voxel format + editor pipeline.
 - Voxel GI (VXGI-style) once Phase 6 streaming is solid.
 - WebGPU fallback (low priority).

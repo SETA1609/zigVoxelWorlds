@@ -1,21 +1,22 @@
 # Platform Adapter Spec
 
-> The stable Zig API for window, events, action-mapped input, time, file I/O, and per-OS native handle getters. Lives as a sub-repo at `libs/zig-cpp-platform-stack-adapter/`. **Single Zig package, multiple backends as source files** — backend selected at build time per target.
+> The stable Zig API for window, events, action-mapped input, time, file I/O, per-OS native handle getters, gamepad, sensor, haptic, clipboard, filesystem paths, power, and IME. Lives as a sub-repo at `libs/zig-cpp-platform-stack-adapter/`. **SDL3 is the backend** (decision 2026-05-26). The "single Zig package, multiple backends as source files" architecture below is retained so a future native or alternate backend can be added without engine source changes — but no such alternate is planned for v1.0.
 >
 > This adapter has **no Vulkan dependency and no dependency on any other adapter.** Surface creation lives in [`zig-cpp-vulkan-stack-adapter`](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) via its own per-OS `createX11Surface` / `createWaylandSurface` / `createWin32Surface` / `createAndroidSurface` functions. The engine bridges with a small helper (`src/render/surface.zig`) that calls a platform getter and the matching vulkan creator. **Both adapters are fully standalone** — no shared types, no cross-imports.
 >
-> Closes [`gaps.md` § 3 #14 input mapping](../gaps.md). Catalog row: [`external-libs-catalog.md` § 3](../external-libs-catalog.md) (Platform-stack meta-package). Migration design from [`tech-stack.md` § Windowing & Input](../tech-stack.md#windowing--input). Pattern precedent: SDL, Godot's `DisplayServer`, Unreal's `IPlatformApplication`.
+> Closes [`gaps.md` § 3 #14 input mapping](../gaps.md). Catalog row: [`external-libs-catalog.md` § 3](../external-libs-catalog.md) (Platform-stack meta-package). Backend choice rationale in [`tech-stack.md` § Windowing & Input](../tech-stack.md#windowing--input) and project memory `project-platform-backend-sdl3`. Pattern precedent: SDL3 itself, Godot's `DisplayServer`, Unreal's `IPlatformApplication`.
 
 ## Scope
 
-A platform abstraction library exposing one stable Zig API surface. The implementation under the hood can swap between major versions of the sub-repo **without engine source changes**:
+A platform abstraction library exposing one stable Zig API surface backed by SDL3:
 
 | Sub-repo version | Backend | Why |
 | --- | --- | --- |
-| **v0.x — v1.0** | GLFW (Zlib) | Rapid iteration; cross-platform coverage out of the box; well-tested; Hazel-precedent |
-| **v1.x onward** | Pure-Zig native: X11, Wayland, Win32, Android | No C deps; smaller export per-target; matches `tech-stack.md` § Windowing long-term goal; no GLFW thread-affinity quirks |
+| **v0.x — v0.5** | GLFW (zlib) — hello-world only | Initial scaffolding; superseded |
+| **v0.6 onward** | **SDL3** (zlib) | Android + Steam Deck + future Switch coverage; Steam Input gamepad mapping; gyro/IMU sensor; IME; haptic — all free with SDL3; GLFW has none of these. Decision 2026-05-26 — see project memory `project-platform-backend-sdl3`. |
+| ~~Pure-Zig native~~ | **Withdrawn** | The earlier plan to ship pure-Zig X11/Wayland/Win32/Android backends in v1.x is withdrawn. Maintaining native backends across five platforms is solo-team-aspirational; SDL3 ships them all reliably. The multi-backend file layout below remains in case a concrete reason ever emerges to add a native backend — but doing so is no longer planned. |
 
-Engine code looks identical across the migration:
+Engine code looks identical regardless of which backend the adapter ships internally:
 
 ```zig
 const platform = @import("platform");
@@ -51,15 +52,15 @@ libs/zig-cpp-platform-stack-adapter/
 ├── LICENSE                          # MIT
 ├── README.md
 ├── build.zig                        # per-target backend selection (see below)
-├── build.zig.zon                    # zero Vulkan deps; GLFW vendored under vendor/glfw/
+├── build.zig.zon                    # zero Vulkan deps; SDL3 vendored under vendor/SDL/
 ├── src/
 │   ├── root.zig                     # public API — re-exports from `backend` module
 │   ├── common.zig                   # shared types: Event, KeyCode, WindowOptions, ActionId (no native-handle type — those getters return inline anon structs)
 │   ├── action_input.zig             # action-mapping layer (platform-agnostic)
 │   ├── native_handle.zig            # per-backend native handle extraction
 │   ├── backend/
-│   │   ├── glfw.zig                 # v0 backend — single file; GLFW handles per-OS internally
-│   │   └── native/                  # v1.x backend — file per OS
+│   │   ├── sdl3.zig                 # SDL3 backend — single file; SDL3 handles per-OS internally
+│   │   └── native/                  # optional retained slot for a future native backend
 │   │       ├── linux.zig            # runtime-dispatches X11 vs Wayland (compiled together)
 │   │       ├── linux_x11.zig        # imported only by linux.zig
 │   │       ├── linux_wayland.zig    # imported only by linux.zig
@@ -68,11 +69,11 @@ libs/zig-cpp-platform-stack-adapter/
 │   │       └── android.zig
 │   └── tests/                       # integration tests against the public API
 └── vendor/
-    └── glfw/                        # external lib as git submodule
-                                     # compiled only when backend=glfw
+    └── SDL/                         # SDL3 as git submodule
+                                     # compiled only when backend=sdl3
 ```
 
-`vendor/glfw/` is a **vendored dependency** of the adapter, not a sub-library of it. Structurally identical to how the Vulkan-stack adapter vendors VMA.
+`vendor/SDL/` is a **vendored dependency** of the adapter, not a sub-library of it. Structurally identical to how the Vulkan-stack adapter vendors VMA. The `backend/native/` slot is retained as scaffolding for a possible future native backend; **it's not on the roadmap** as of 2026-05-26 but the architecture supports it without rewriting the public API.
 
 ## Build-time backend selection — per-target tree-shaking
 
@@ -86,11 +87,11 @@ pub fn build(b: *std.Build) void {
         BackendChoice,
         "platform_backend",
         "Platform backend implementation",
-    ) orelse .glfw;
+    ) orelse .sdl3;
 
     // Pick the backend source file by (choice, target OS)
     const backend_root = switch (backend_choice) {
-        .glfw => "src/backend/glfw.zig",
+        .sdl3 => "src/backend/sdl3.zig",
         .native => switch (target.result.os.tag) {
             .linux   => "src/backend/native/linux.zig",
             .windows => "src/backend/native/windows.zig",
@@ -113,25 +114,26 @@ pub fn build(b: *std.Build) void {
     });
     platform_mod.addImport("backend", backend_mod);
 
-    // GLFW vendored source compiled only when backend=glfw
-    if (backend_choice == .glfw) {
+    // SDL3 vendored source compiled only when backend=sdl3
+    if (backend_choice == .sdl3) {
         backend_mod.addCSourceFiles(.{
-            .files = &glfw_sources_for_target(target.result.os.tag),
+            .files = &sdl3_sources_for_target(target.result.os.tag),
             // ...
         });
     }
 }
 ```
 
-The compiler walks the import graph from the chosen backend root. Files for other OSes / other backends are **never referenced** → never parsed, type-checked, or codegen'd. Same as how SDL's CMake excludes `src/video/win32/` when building for Linux, but cleaner because Zig's `@import` is graph-resolved per build rather than preprocessor-gated.
+The compiler walks the import graph from the chosen backend root. Files for other OSes / other backends are **never referenced** → never parsed, type-checked, or codegen'd. SDL3's CMake already excludes per-OS subtrees when building for one target; our Zig wrapper inherits that via `addCSourceFiles` of only the relevant subset.
 
 ### Per-target tree-shake guarantee
 
 | Export target | Files compiled into the export | Files NOT touched |
 | --- | --- | --- |
-| `--target x86_64-linux-gnu -Dplatform_backend=native` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (linux branch) + `backend/native/linux.zig` + `linux_x11.zig` + `linux_wayland.zig` | All Win32/macOS/Android backend files; all GLFW vendor source |
-| `--target x86_64-windows-gnu -Dplatform_backend=native` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (win32 branch) + `backend/native/windows.zig` | All Linux/macOS/Android backend files; all GLFW vendor source |
-| `--target x86_64-linux-gnu -Dplatform_backend=glfw` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (glfw branch) + `backend/glfw.zig` + `vendor/glfw/` (Linux subset only) | All native backend files; GLFW's Windows/macOS sources (GLFW's own CMake gates them) |
+| `--target x86_64-linux-gnu -Dplatform_backend=sdl3` (default) | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + `vendor/SDL/` (Linux subset only) | SDL3's Windows/macOS/Android sources (SDL3's own CMake gates them); all `backend/native/*` files |
+| `--target x86_64-windows-gnu -Dplatform_backend=sdl3` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + `vendor/SDL/` (Windows subset only) | SDL3's Linux/macOS/Android sources; all `backend/native/*` files |
+| `--target aarch64-linux-android -Dplatform_backend=sdl3` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + `vendor/SDL/` (Android subset only — includes `SDLActivity.java` bridge) | SDL3's desktop sources |
+| `--target x86_64-linux-gnu -Dplatform_backend=native` (future option, not on roadmap) | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (linux branch) + `backend/native/linux.zig` + `linux_x11.zig` + `linux_wayland.zig` | All Win32/macOS/Android backend files; all SDL3 vendor source |
 
 Verification rule: `nm libzvox-runtime.so | grep -i 'win32\|wayland\|cocoa'` shows only the symbols for the target platform.
 
@@ -160,11 +162,11 @@ Opt-out: `-Dlinux_backend=wayland` compiles only `linux_wayland.zig` (embedded k
 
 ## The four design rules — non-negotiable
 
-These rules are what keep the GLFW → native migration cheap. Violating any of them turns the v1.x swap into a rewrite.
+These rules are what keep a future backend swap cheap (SDL3 → native, SDL3 → SDL4, etc.). Violating any of them turns a future backend swap into a rewrite.
 
-### Rule 1 — Design the API to the engine's needs, not GLFW's idioms
+### Rule 1 — Design the API to the engine's needs, not SDL3's idioms
 
-The public API in `src/root.zig` exposes **engine concepts**, not GLFW concepts. No `glfwSetKeyCallback`-style C function-pointer registration. No `GLFWwindowhint`. No GLFW handle types.
+The public API in `src/root.zig` exposes **engine concepts**, not SDL3 concepts. No `SDL_AddEventWatch`-style C function-pointer registration leaking across the boundary. No `SDL_WindowFlags`. No raw `SDL_Window*` / `SDL_Event` types.
 
 ```zig
 // GOOD — engine concept
@@ -178,12 +180,12 @@ pub const Event = union(enum) {
     focus:    FocusEvent,
 };
 
-// BAD — would poison the API for the native backend
+// BAD — would poison the API by leaking backend idioms
 pub fn setKeyCallback(window: *Window, cb: fn (...) callconv(.c) void) void;
-pub const WindowHint = enum { glfw_resizable, ... };
+pub const WindowHint = enum { sdl_resizable, ... };
 ```
 
-The native backend reads `Event` from a queue; the GLFW backend reads `Event` from a queue. Both populate `Event` from their own sources internally.
+The SDL3 backend pumps `Event` from `SDL_PollEvent` into a queue; a future native backend would pump from its own sources. Both populate the same engine-visible `Event` shape.
 
 ### Rule 2 — Per-OS native handle getters; the renderer has matching creators; engine bridges
 
@@ -191,7 +193,7 @@ The platform adapter has **no Vulkan dependency and no dependency on any other a
 
 Why fully decoupled and not "shared NativeWindowHandle type": a shared union would force vulkan-stack to import a definition from platform-stack (or vice versa). Adopting per-OS function pairs eliminates even that. Each adapter is reusable in isolation — a headless tool linking platform-stack stays Vulkan-free; a Vulkan-stack consumer that uses a different windowing layer (SDL, raw X11, custom) needs no platform-stack import.
 
-This is exactly the pattern GLFW exposes via `glfw3native.h` (`glfwGetX11Window`, `glfwGetWin32Window`, etc.) and Vulkan itself uses for its `VK_KHR_*_surface` extensions (separate `vkCreate*SurfaceKHR` functions, not one unified `vkCreateNativeSurfaceKHR`).
+This is exactly the pattern SDL3 exposes via `SDL_GetWindowProperties` + per-backend `SDL_PROP_WINDOW_X11_*`/`WAYLAND_*`/`WIN32_*`/`ANDROID_*` keys, which Vulkan itself uses for its `VK_KHR_*_surface` extensions (separate `vkCreate*SurfaceKHR` functions, not one unified `vkCreateNativeSurfaceKHR`).
 
 #### Per-backend, platform-stack implements per-OS getters
 
@@ -209,13 +211,12 @@ Per-backend behavior:
 
 | Backend | Behavior |
 | --- | --- |
-| GLFW (Linux X11) | `getX11Handle` returns the result of `glfwGetX11Display` + `glfwGetX11Window`; others return null |
-| GLFW (Linux Wayland) | `getWaylandHandle` returns `glfwGetWaylandDisplay` + `glfwGetWaylandWindow`; others null |
-| GLFW (Windows) | `getWin32Handle` returns `GetModuleHandleW(null)` + `glfwGetWin32Window`; others null |
-| Native X11 | `getX11Handle` returns the adapter's internal `xcb_connection_t` + window ID |
-| Native Wayland | `getWaylandHandle` returns the adapter's internal `wl_display*` + `wl_surface*` |
-| Native Win32 | `getWin32Handle` returns the `HINSTANCE` + `HWND` from the internal `CreateWindowExW` state |
-| Native Android | `getAndroidHandle` returns `ANativeWindow*` from the activity |
+| SDL3 (Linux X11) | `getX11Handle` reads `SDL_GetWindowProperties(window)` for `SDL_PROP_WINDOW_X11_DISPLAY_POINTER` + `SDL_PROP_WINDOW_X11_WINDOW_NUMBER`; others return null |
+| SDL3 (Linux Wayland) | `getWaylandHandle` reads `SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER` + `SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER`; others null |
+| SDL3 (Windows) | `getWin32Handle` reads `SDL_PROP_WINDOW_WIN32_INSTANCE_POINTER` + `SDL_PROP_WINDOW_WIN32_HWND_POINTER`; others null |
+| SDL3 (Android) | `getAndroidHandle` reads `SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER` (`ANativeWindow*`); others null |
+| SDL3 (macOS, deferred) | `getCocoaHandle` reads `SDL_PROP_WINDOW_COCOA_METAL_LAYER_POINTER`; others null |
+| Future native backend (if ever added) | Returns the adapter's internal raw handles directly (no SDL property indirection) |
 
 #### Vulkan-stack implements matching per-OS surface creators
 
@@ -286,7 +287,7 @@ Engine call sites stay one line:
 const surface = try render.createSurface(vk_instance, window);
 ```
 
-Reference precedent: this is exactly **GLFW's `glfw3native.h` pattern + Vulkan's own `VK_KHR_*_surface` extension model**. Per-platform getters on the windowing side, per-platform creators on the rendering side, caller pairs them. No shared "native handle" type — Vulkan itself doesn't have one. SDL's `SDL_GetWindowWMInfo` is the alternative (shared tagged struct); we follow GLFW + Vulkan instead because it keeps the two adapters fully independent.
+Reference precedent: **SDL3's `SDL_GetWindowProperties()` per-backend property keys** (which replaced SDL2's `SDL_GetWindowWMInfo` tagged-struct API) + Vulkan's own `VK_KHR_*_surface` extension model. Per-platform getters on the windowing side, per-platform creators on the rendering side, caller pairs them. No shared "native handle" type — Vulkan itself doesn't have one. Our Zig API exposes typed per-OS getters (`getX11Handle`, etc.) so the engine never sees raw `SDL_PropertiesID` values; the SDL3 property layer is an implementation detail inside the adapter.
 
 ### Rule 3 — Pick engine-canonical behavior; document divergence honestly
 
@@ -321,19 +322,19 @@ pub fn capabilities() Capabilities;
 
 Engine code that needs platform-specific behavior queries the flag.
 
-### Rule 4 — Integration tests run against both backends
+### Rule 4 — Integration tests run against every supported backend
 
-Because the API surface is stable, every integration test must work against `glfw` AND `native` backends. CI runs the test suite twice:
+Because the API surface is stable, every integration test must work against every backend the adapter ships. Today that's the SDL3 backend only. If a native backend is ever added, CI must run the test suite against both. CI matrix (sketch):
 
 ```yaml
 # (sketch — actual CI lives elsewhere)
 strategy:
   matrix:
-    backend: [glfw, native]
-    target: [x86_64-linux-gnu, x86_64-windows-gnu]
+    backend: [sdl3]                     # add `native` here if/when that backend lands
+    target: [x86_64-linux-gnu, x86_64-windows-gnu, aarch64-linux-android]
 ```
 
-When the native backend lands, divergence is caught immediately, not at engine integration time. This is the insurance policy for the migration.
+If a native backend is ever added, divergence between backends would be caught immediately, not at engine integration time. This is the insurance policy for a future swap.
 
 ## Public API surface (v1.0)
 
@@ -600,60 +601,63 @@ The per-OS getters expose raw OS primitives. The engine's `src/render/surface.zi
 | **SDL3** ✅ best fit | `$REFS/godot/thirdparty/sdl/` (Godot's vendored copy) · upstream: <https://github.com/libsdl-org/SDL> · `src/video/{x11,wayland,cocoa,windows}/` · `src/events/SDL_events.c` | THE reference impl of "one stable API, many backends." Study the event-queue pattern + the per-platform `SDL_VideoDevice` vtable. Don't port C++; absorb the design |
 | **Godot — DisplayServer** | `$REFS/godot/servers/display_server.h` + `platform/{linuxbsd,windows,macos,android}/display_server_*.cpp` | Abstract base + per-platform subclasses. Same idea, C++ machinery. Read the API surface; implement via Zig comptime dispatch instead of vtables |
 | **Unreal — IPlatformApplication** | `$REFS/UnrealEngine/Engine/Source/Runtime/ApplicationCore/Public/GenericPlatform/` + per-platform under `Linux/`, `Windows/`, `Apple/`, `Android/` | Heavier than we want, but worth reading for the breadth of platform concerns it covers (drag-drop, IME, accessibility hooks) |
-| **GLFW** | <https://github.com/glfw/glfw> · `src/{x11,wayland,cocoa,win32}_*.c` | Our v0 backend. Study `src/internal.h` for the `_GLFWplatform` vtable — that's the shape the v1.x native backend should match in spirit |
+| **SDL3** | <https://github.com/libsdl-org/SDL> · `src/video/{x11,wayland,cocoa,windows,android}/`, `src/joystick/`, `src/sensor/`, `src/haptic/` | Our backend. Study `src/video/SDL_sysvideo.h` for the `SDL_VideoDevice` vtable — that's the shape any future native backend should match in spirit |
+| **GLFW** | <https://github.com/glfw/glfw> · `src/{x11,wayland,cocoa,win32}_*.c` | Earlier v0 hello-world backend, superseded. Still a useful reference for a *minimal* per-OS windowing implementation if a future native backend is ever attempted |
 | **Hazel** | `$REFS/Hazel/Hazel/src/Platform/` | GLFW-coupled, no abstraction. **Anti-reference** — this is what NOT to do |
 
 Adaptation rule per [`engine-references.md` § Legal](../engine-references.md): read, understand, reimplement in Zig. SDL is the closest license-compatible (zlib) reference but **do not copy verbatim** — design your API to engine needs (rule 1), use SDL only as pattern validation.
 
-## Migration plan — GLFW v0 → native v1.x
+## Backend swap plan — GLFW → SDL3 (active 2026-05-26)
 
-### Pre-flight checks (before native backend work starts)
+This replaces the earlier "GLFW v0 → native v1.x" migration. The sub-repo today contains a GLFW hello-world; the next sub-repo commits replace that with SDL3.
 
-- All engine code compiles and runs against the GLFW backend
-- All four design rules audited — no GLFW idioms in the public API
-- Integration test suite passes against the GLFW backend
-- Capability flag set is committed; engine code that branches on capabilities works
+### Pre-flight checks
 
-### Build the native backend incrementally
+- Engine consumers compile against the existing GLFW hello-world surface (the API is intentionally narrow at this stage)
+- All four design rules audited — no GLFW idioms leaked into the public API
+- Capability flag set committed; SDL3-only features (gamepad, sensor, haptic, IME, power) get capability flags
+
+### Swap GLFW → SDL3 incrementally
 
 | Step | Scope | Verification |
 | --- | --- | --- |
-| 1 | `linux_x11.zig` only — no Wayland yet | Same integration tests pass against `-Dplatform_backend=native -Dlinux_backend=x11` |
-| 2 | `linux_wayland.zig` + runtime dispatch in `linux.zig` | Tests pass against both X11 and Wayland in CI |
-| 3 | `windows.zig` | Tests pass against Windows in CI |
-| 4 | `android.zig` (the v1.x Android port lands here) | Tests pass against Android emulator |
-| 5 | macOS deferred per `mission.md` | n/a v1.x |
+| 1 | Vendor SDL3 under `vendor/SDL/` as a git submodule pinned to a stable SDL3 release tag | `zig build` of the adapter succeeds with SDL3 compiled |
+| 2 | Replace `backend/glfw.zig` with `backend/sdl3.zig` — window + event pump + Vulkan surface property reads | Hello-world opens an SDL3 window on Linux X11 and Wayland; surface query returns valid props |
+| 3 | Wire native-handle getters via `SDL_GetWindowProperties` | `platform.getX11Handle` / `getWaylandHandle` / `getWin32Handle` / `getAndroidHandle` each return inline-anon-struct of raw primitives or `null` |
+| 4 | Action-mapped input through `SDL_PollEvent` | Synthetic + real inputs route through the same code path; integration tests pass |
+| 5 | Add gamepad (`SDL_Gamepad`), sensor (`SDL_Sensor`), haptic (`SDL_GamepadRumble`), clipboard (`SDL_SetClipboardText`), filesystem paths (`SDL_GetPrefPath`), power (`SDL_GetPowerInfo`), IME (`SDL_StartTextInput`) | Each gets its own integration test |
+| 6 | Android sub-target build — pull in `SDLActivity.java` template | Android emulator integration test |
 
-Each step is its own atomic sub-repo commit. Engine repo doesn't touch this.
+Each step is its own atomic sub-repo commit. Engine repo doesn't touch this until the SDL3 adapter version is bumped.
 
-### Release the native backend as `libs/zig-cpp-platform-stack-adapter@v2.0`
+### Release `libs/zig-cpp-platform-stack-adapter@v0.6`
 
-- Engine bumps the dep version in `build.zig.zon` from `v1.x` (GLFW) to `v2.0` (native)
-- One engine commit: `chore(deps): bump platform-adapter v1.x → v2.0 (native backend)`
-- Roll-back is reverting the version pin; same engine source on either side
+- Engine bumps the dep version in `build.zig.zon` from `v0.5` (GLFW hello-world) to `v0.6` (SDL3)
+- One engine commit: `chore(deps): bump platform-adapter v0.5 → v0.6 (SDL3 backend)`
+- Roll-back is reverting the version pin; engine source unchanged on either side
 
-### Cleanup (optional v2.x)
+### Cleanup
 
-- Remove `backend/glfw.zig` and `vendor/glfw/` from the sub-repo, OR keep them as an opt-in for users who prefer GLFW (e.g. for embedded distros with poor Wayland support)
-- Decision deferred until v2.0 ships; user-feedback-driven
+- Remove `backend/glfw.zig` and `vendor/glfw/` from the sub-repo at v0.6
+- `backend/native/` directory **retained** as scaffolding for a possible future native backend; no implementation in v0.6
 
 ## Open decisions
 
 - **macOS backend timing** — `mission.md` defers macOS post-v1.0. If a community user contributes a macOS backend earlier, integrate; otherwise wait
 - **Android backend touchscreen events** — `.touch` event type vs treating touch as mouse — decide during Android port (Phase post-v1.0)
 - **Multiple-window support** — v1.0 ships single primary window only; multi-window (editor + playtest in separate OS windows) deferred to Phase 12
-- **Game controller force feedback** — defer to v1.x; expose capability flag now so we can light up later without ABI break
+- **Game controller force feedback** — SDL3 provides this via `SDL_GamepadRumble`; ship in v0.6, no longer deferred
 
 ## Milestone
 
 Phase 1 — adopt the Platform-stack adapter alongside the Vulkan-stack adapter. Verifications:
 
-- Window opens, events received, key + mouse + gamepad input working end-to-end against the GLFW v0 backend
+- Window opens, events received, key + mouse + gamepad input working end-to-end against the SDL3 backend (v0.6+)
 - Action bindings load from TOML; per-save rebindings persist
 - Context stack: push `dialog` → gameplay's `attack_primary` is masked → pop → gameplay's binding is live again
 - Synthetic injection: `injectAction(.jump, true, 1.0)` triggers the same code path as a real spacebar press; verified by integration test
 - Axis-binding modifiers: deadzone + smooth + invert applied correctly on gamepad sticks
 - Native handle getters: `platform.getX11Handle(window)` / `getWaylandHandle` / `getWin32Handle` / `getAndroidHandle` each return either inline-anon-struct of raw primitives or `null`. The renderer's matching per-OS `createX11Surface` / `createWin32Surface` / etc. consume them. No shared type between adapters
-- Build verification: `nm` on a Linux export shows no Win32/macOS/Android symbols. The platform adapter emits zero `vk*` symbols (no Vulkan dep). The vulkan-stack adapter emits zero `glfw*` / `x11*` / `wl_*` / `win32*` symbols beyond the matching `vkCreate*SurfaceKHR` call
+- Build verification: `nm` on a Linux export shows no Win32/macOS/Android symbols. The platform adapter emits zero `vk*` symbols (no Vulkan dep). The vulkan-stack adapter emits zero `SDL_*` / `x11*` / `wl_*` / `win32*` symbols beyond the matching `vkCreate*SurfaceKHR` call
 
-Native backend (v1.x) ships after v1.0 voxel-Daggerfall release per [`vision.md` § Shipping strategy](../vision.md). Same verifications must pass against `-Dplatform_backend=native` in CI before the v1.x → v2.0 sub-repo bump lands in the engine.
+A future native backend (if ever undertaken) would follow the same verification matrix against `-Dplatform_backend=native` in CI. Not on the post-v1.0 roadmap as of 2026-05-26 — SDL3 is the planned backend through v1.0+.

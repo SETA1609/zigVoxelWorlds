@@ -131,7 +131,7 @@ C++ adapter code follows [`cpp-style.md`](cpp-style.md) — Google C++ Style Gui
 | Library | Upstream | License | Adapter license | Role | Phase |
 | --- | --- | --- | --- | --- | --- |
 | **Vulkan-stack** (meta-package — see note below) | bundle: vulkan-zig · VMA · volk · shaderc | mixed permissive | MIT | Vulkan stack: bindings + GPU memory + loader + shader compile. Single sub-repo enforces version coherence | 1 / 4 / 7.5 |
-| **Platform-stack** (meta-package — see note below) | v0 bundle: GLFW · → · v1.x: pure-Zig X11/Wayland/Win32/Android | Zlib (v0) → all permissive (v1.x) | MIT | Window · events · input · time · file I/O · per-OS native handle getters. **No Vulkan dep and no cross-adapter dep** — engine bridges per-OS getters to vulkan-stack's per-OS creators. Same Zig API across the GLFW → native migration ([`specs/platform.md`](specs/platform.md)) | 1 |
+| **Platform-stack** (meta-package — see note below) | **SDL3** (decision 2026-05-26 — supersedes the earlier GLFW v0 / pure-Zig v1.x plan) | zlib (SDL3) | MIT | Window · events · input · time · file I/O · per-OS native handle getters · **gamepad (Steam Input mapping)** · **sensor (Steam Deck gyro / mobile IMU)** · **haptic (rumble)** · **clipboard** · **filesystem paths (XDG / FOLDERID / NSDirectory / Android internal storage)** · **power info** · **IME / text input**. **No Vulkan dep and no cross-adapter dep** — engine bridges per-OS getters to vulkan-stack's per-OS creators ([`specs/platform.md`](specs/platform.md)) | 1 |
 | **Jolt Physics** | <https://github.com/jrouwe/JoltPhysics> | MIT | MIT | Physics solver, characters, ragdolls | 5 |
 | **Dear ImGui** | <https://github.com/ocornut/imgui> | MIT | MIT | Editor / dev panels | 1 |
 | **ImGuizmo** | <https://github.com/CedricGuillemet/ImGuizmo> | MIT | MIT | 3D transform gizmos in the scene editor | 12 |
@@ -185,7 +185,7 @@ Why bundle: VMA's headers embed assumptions about specific Vulkan-1.x function s
 
 What's **not** in the stack:
 
-- **GLFW** — windowing/input, orthogonal to Vulkan. Vulkan can take surfaces from any window source (X11/Wayland/Win32/Android raw handles, SDL, GLFW). GLFW now lives inside the **Platform-stack adapter** as its v0 backend (see Platform-stack note below); keeping it out of the Vulkan stack means the two adapters can migrate independently.
+- **SDL3** — windowing/input/etc, orthogonal to Vulkan. Vulkan can take surfaces from any window source (X11/Wayland/Win32/Android raw handles via SDL3's property API). SDL3 lives inside the **Platform-stack adapter** (see Platform-stack note below); keeping it out of the Vulkan stack means the two adapters can move independently.
 - **SPIRV-Reflect** — pure C, not Vulkan-version-coupled (it walks SPIR-V binaries against the SPIR-V spec, not against a Vulkan version). Stays in §2.
 - **post-processing / material pipeline / frame graph** — these are engine code, not third-party libs. They live in `src/render/`.
 
@@ -193,14 +193,15 @@ What's **not** in the stack:
 
 Second instance of the meta-package pattern (the first is the Vulkan-stack above). The sub-repo lives at `libs/zig-cpp-platform-stack-adapter/`.
 
-The platform adapter exposes a stable Zig API to the engine (window, events, action-mapped input, time, file I/O, and per-OS native handle getters: `getX11Handle` / `getWaylandHandle` / `getWin32Handle` / `getAndroidHandle`). The implementation backend is internal to the adapter and **can change between major versions of the sub-repo without engine source changes**.
+The platform adapter exposes a stable Zig API to the engine (window, events, action-mapped input, time, file I/O, per-OS native handle getters: `getX11Handle` / `getWaylandHandle` / `getWin32Handle` / `getAndroidHandle`, gamepad, sensor, haptic, clipboard, filesystem paths, power, IME). The implementation backend is internal to the adapter.
 
-**No Vulkan dependency and no cross-adapter dependency.** Surface creation lives in the Vulkan-stack adapter via its own per-OS functions (`createX11Surface` / `createWaylandSurface` / `createWin32Surface` / `createAndroidSurface`), each taking only raw OS primitives (pointers + integers). The engine wires the two together in a small `src/render/surface.zig` helper that comptime-branches on `builtin.target.os.tag`. **No shared type crosses the boundary** — both adapters are fully standalone and reusable in isolation. Reference precedent: GLFW's `glfw3native.h` getters + Vulkan's own `VK_KHR_*_surface` extension pairs.
+**No Vulkan dependency and no cross-adapter dependency.** Surface creation lives in the Vulkan-stack adapter via its own per-OS functions (`createX11Surface` / `createWaylandSurface` / `createWin32Surface` / `createAndroidSurface`), each taking only raw OS primitives (pointers + integers). The engine wires the two together in a small `src/render/surface.zig` helper that comptime-branches on `builtin.target.os.tag`. **No shared type crosses the boundary** — both adapters are fully standalone and reusable in isolation. Reference precedent: SDL3's `SDL_GetWindowProperties()` per-backend property keys (`SDL_PROP_WINDOW_X11_DISPLAY_POINTER`, `SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER`, etc.) + Vulkan's own `VK_KHR_*_surface` extension pairs.
 
 | Version | Backend | Why |
 | --- | --- | --- |
-| **v0.x — v1.0** | GLFW (Zlib) | Rapid iteration; cross-platform out of the box; well-tested |
-| **v1.x onward** | Pure-Zig native: X11, Wayland, Win32, Android | No C deps; smaller export; no GLFW thread-affinity quirks; matches `tech-stack.md` § Windowing & Input long-term goal |
+| **v0.x — v0.5** | GLFW (zlib) — hello-world only | Initial scaffolding; superseded |
+| **v0.6 onward** | **SDL3** (zlib) | Decision 2026-05-26: Android + Steam Deck + future Switch coverage, Steam Input gamepad mapping, gyro/IMU sensor, IME, haptic — all free with SDL3; GLFW has none of these |
+| ~~**v1.x** Pure-Zig native~~ | **Withdrawn 2026-05-26** | Maintaining native X11 / Wayland / Win32 / Android backends in pure Zig was solo-team-aspirational. SDL3 covers all those platforms with shipped reliability. The optional "single library, multiple backends as files" architecture in [`specs/platform.md`](specs/platform.md) still allows a native backend to be added later if a concrete reason emerges. |
 
 Engine code looks identical across the migration:
 
@@ -231,7 +232,7 @@ if (input.actionPressed(.jump)) player.jump();
 const surface = try render.createSurface(vk_instance, window);
 ```
 
-Migration trigger is bumping `libs/zig-cpp-platform-stack-adapter` from v1.0 to v2.0 in `build.zig.zon`. Engine commits track no part of the swap. The same Zig API stays at the boundary — only the implementation under the hood changes.
+Backend changes are sub-repo-internal; the engine never sees them. The same Zig API surface stays stable; only the SDL3 calls inside the adapter change as SDL3 itself evolves.
 
 What's deliberately **not** in the platform stack:
 
@@ -240,7 +241,7 @@ What's deliberately **not** in the platform stack:
 - **High-level input mapping (UI focus graph, mod-defined actions)** — engine code in `src/input/` consumes the platform layer's raw input + action-mapped events but adds the focus graph / mod-action layers itself
 - **Filesystem watcher** — `filewatch` (§2) is small and works on raw paths; doesn't need platform-adapter integration
 
-Reference patterns: this is structurally the [SDL design](https://www.libsdl.org/) (one stable C API across decades; X11/Wayland/Cocoa/Win32/Android backends rotate underneath). The Zig-native version, by us, with GLFW as the v0 expedient.
+Reference patterns: we adopt [SDL3](https://www.libsdl.org/) directly (one stable C API across decades; X11/Wayland/Cocoa/Win32/Android backends rotate underneath). The Zig-native wrap means the engine sees a Zig API, never raw SDL — same C-ABI-only-across-boundary discipline as every other adapter.
 
 Detailed contract: [`specs/platform.md`](specs/platform.md).
 
@@ -257,7 +258,7 @@ A pure-C library moves from §2 to §4 when **two or more** of the following hol
 
 | Library | License | Why §4 not §2 | Future |
 | --- | --- | --- | --- |
-| *(no current entries — GLFW used to live here; it now sits inside the Platform-stack adapter as its v0 backend, see §3)* | | | |
+| *(no current entries — GLFW used to be a §4 candidate; the Platform-stack adapter now uses SDL3 instead, see §3)* | | | |
 
 Default to §2 unless the criteria above are clearly met. Don't pre-emptively wrap "just in case" — that's premature abstraction. §4 is intentionally narrow — most libs route through §2 or §3.
 
@@ -269,7 +270,7 @@ Foundation work that unlocks editor + basic world. Each step builds on prior one
 
 | Order | Adoption | Phase | Purpose |
 | --- | --- | --- | --- |
-| 1 | **Vulkan-stack adapter** (§3 — bundles vulkan-zig + VMA + volk + shaderc) + **Platform-stack adapter** (§3 — bundles GLFW today, pure-Zig X11/Wayland/Win32/Android in v1.x) | 1 | Open a window, render |
+| 1 | **Vulkan-stack adapter** (§3 — bundles vulkan-zig + VMA + volk + shaderc) + **Platform-stack adapter** (§3 — SDL3 backend per the 2026-05-26 decision) | 1 | Open a window, render |
 | 2 | **ImGui adapter** (§3) | 1 | Editor scaffolding |
 | 3 | **TOML parser** (§1) | 2 | Load game data + manifests |
 | 4 | **stb_image** (§2) + **cgltf** (§2) + **MikkTSpace** (§2) | 4 | Asset pipeline basics — image + model + tangents |

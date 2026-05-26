@@ -8,7 +8,7 @@ This is the "Adapter sub-project" tier (§3) in [`external-libs-catalog.md`](../
 
 | Submodule | Stack contents | Phase | Status |
 | --- | --- | --- | --- |
-| `zig-cpp-platform-stack-adapter/` | GLFW (v0) → pure-Zig X11/Wayland/Win32/Android (v1.x). Window · events · input · time · file I/O · per-OS native handle getters | 1 | landed |
+| `zig-cpp-platform-stack-adapter/` | **SDL3** (decision 2026-05-26 — replaces the earlier GLFW v0 / pure-Zig v1.x plan). Window · events · input · time · file I/O · per-OS native handle getters · gamepad (Steam Input) · sensor (gyro / IMU) · haptic · clipboard · filesystem paths · power info · IME | 1 | landed (GLFW backend; SDL3 swap on the Phase 1 sprint) |
 | `zig-cpp-vulkan-stack-adapter/` | vulkan-zig · VMA · volk · shaderc — bindings + GPU memory + loader + shader compile | 1 / 4 / 7.5 | landed |
 
 ## Planned submodules
