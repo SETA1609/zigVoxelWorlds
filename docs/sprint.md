@@ -35,11 +35,11 @@ The two meta-package adapters become engine deps. Once this section is green, th
   - Acceptance: `zig build` still works; manifest validated
   - Commit: `chore(build): add build.zig.zon package manifest for the engine`
 
-- [ ] **B.2** Inside `libs/zig-cpp-platform-stack-adapter/`: extend its `build.zig` so it actually exposes a `platform` module (currently it's the hello-world template). Stub `src/root.zig` with the public API surface from [`specs/platform.md` § Public API surface (v1.0)](specs/platform.md) — all functions can `@panic("not implemented")` for now, except `Window.create` / `Window.destroy` / `nextEvent` which need to actually work via GLFW. Tag this `v0.1.0` and push.
-  - Files (in sub-repo): `build.zig`, `src/root.zig`, `src/common.zig`, `src/backend/glfw.zig`, `vendor/glfw/` (submodule)
-  - Acceptance: `zig build` in the sub-repo produces a static lib that exports `platform` module; sub-repo's smoke test opens + closes a GLFW window
-  - Sub-repo commit: `feat: minimal platform module exposing Window + nextEvent via GLFW backend`
-  - Parent commit: `chore(submodules): bump platform-stack → v0.1.0 (minimal Window/event API)`
+- [ ] **B.2** Inside `libs/zig-cpp-platform-stack-adapter/`: extend its `build.zig` so it actually exposes a `platform` module (currently it's the hello-world template). Stub `src/root.zig` with the public API surface from [`specs/platform.md` § Public API surface (v1.0)](specs/platform.md) — all functions can `@panic("not implemented")` for now, except `Window.create` / `Window.destroy` / `nextEvent` which need to actually work via **SDL3** (per the 2026-05-26 backend decision; see project memory `project-platform-backend-sdl3`). Vendor SDL3 as a git submodule under `vendor/SDL/`. Tag this `v0.6.0` and push.
+  - Files (in sub-repo): `build.zig`, `src/root.zig`, `src/common.zig`, `src/backend/sdl3.zig`, `vendor/SDL/` (submodule pinned to a stable SDL3 release tag)
+  - Acceptance: `zig build` in the sub-repo produces a static lib that exports `platform` module; sub-repo's smoke test opens + closes an SDL3 window
+  - Sub-repo commit: `feat: minimal platform module exposing Window + nextEvent via SDL3 backend`
+  - Parent commit: `chore(submodules): bump platform-stack → v0.6.0 (SDL3 backend, Window/event API)`
 
 - [ ] **B.3** Inside `libs/zig-cpp-vulkan-stack-adapter/`: extend its `build.zig` so it actually exposes a `vulkan_stack` module. Add vulkan-zig as a dependency in its `build.zig.zon`. `src/root.zig` does `pub const vk = @import("vulkan");`. Stub `src/vma.zig`, `src/volk.zig`, `src/shaderc.zig` as panic-on-call for now; only the `vk` re-export needs to work. Stub the per-OS surface creators (`createX11Surface`, `createWaylandSurface`, `createWin32Surface`) as panic-on-call too — they'll get real bodies in Section D. Tag `v0.1.0` and push.
   - Files (in sub-repo): `build.zig`, `build.zig.zon` (add vulkan-zig dep), `src/root.zig`, `src/vma.zig`, `src/volk.zig`, `src/shaderc.zig`, `src/surface.zig`
@@ -144,6 +144,42 @@ The actual Phase 1 milestone.
 - [ ] **F.3** Retrospective in this file: what surprised you about Zig 0.16's build system, the adapter pattern, Vulkan setup? Note anything that pushes back on a Phase 0 design decision (we'd rather revise now than after Phase 3 ships).
   - Files: append "## Sprint 1 retrospective" section to this doc, OR archive this file as `sprint-1.md` and start a fresh `sprint.md` for Sprint 2 (Phase 2)
   - Commit: `docs(sprint): close sprint 1 retrospective; tee up sprint 2`
+
+---
+
+## Section G — Validation track (parallel; in a separate repo)
+
+**This work happens in a separate session against a reference C++ host** (see [`external-libs-catalog.md` § 5.5](external-libs-catalog.md)). Code never flows back into `zigVoxelWorlds/`. The goal is to exercise the adapter under real workload before engine code depends on it. Time estimates assume the separate host repo is already set up.
+
+Per the strategy in § 5.5, the Tier A adapters are:
+
+- [ ] **G.1** — Tracy adapter validation (smallest, fastest signal)
+  - Build the reference host with Tracy linked from `libs/zig-cpp-tracy-stack-adapter/` (the engine's adapter, consumed as a sub-project — not vendored back into the reference)
+  - Wrap `TracyZoneScoped` macros around the reference's hot loops (server tick, meshgen, save path)
+  - Acceptance: Tracy client connects, zones visible in profiler UI, no link errors, no symbol clashes
+  - Outcome: confidence that the adapter's Zig-build setup + C ABI is sound — the smallest meaningful end-to-end test
+  - Estimate: 1–2 days assuming the adapter sub-repo is buildable
+
+- [ ] **G.2** — ENet net-stack adapter swap (strongest signal)
+  - Replace `#include <enet/enet.h>` in the reference host's network layer with the adapter's C ABI calls
+  - Run a real multi-client session against the modified host
+  - Acceptance: same network behavior as upstream — clients connect, packets flow, no regressions
+  - Outcome: validates the net-stack adapter's C ABI under real game traffic before `modules/multiplayer/` depends on it (Phase 10)
+  - Estimate: 3–5 days; the API surface is small (~30 functions)
+
+- [ ] **G.3** — meshoptimizer mesh-stack adapter pass (clean augmentation)
+  - Add a meshopt post-pass on the reference host's chunk-mesh generator
+  - Acceptance: meshes optimized correctly (vertex cache hit-rate improved), no rendering artifacts
+  - Outcome: pre-validates the mesh-opt wrapper for `modules/voxel_core/` greedy-mesh output (Phase 4 / 6)
+  - Estimate: 1 day
+
+**Workflow rules** (per [`external-libs-catalog.md` § 5.5](external-libs-catalog.md) + project memory `project-luanti-fork-workflow`):
+
+- One-way code flow: zVox adapter → reference host. Never copy reference-host code into zVoxRealms.
+- Never open both repos in the same LLM/editor session.
+- Time-box each: pick a concrete deliverable per adapter, not "modernize the host."
+
+**Sprint 1 doesn't block on G.\***. The validation track runs in parallel; G.1 should land near the end of Sprint 1 / start of Sprint 2 so Phase 2's `modules/multiplayer/` planning benefits from G.2's findings.
 
 ---
 

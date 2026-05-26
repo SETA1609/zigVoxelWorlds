@@ -292,6 +292,60 @@ Foundation work that unlocks editor + basic world. Each step builds on prior one
 
 ---
 
+## §5.5. Library validation strategy — exercise adapters in a reference C++ host before engine adoption
+
+**Rationale.** Each `libs/zig-cpp-*-adapter/` sub-repo wraps a C/C++ library behind a stable C ABI. Bugs in the C ABI shape, build wiring, or platform behavior surface late — usually only when engine code starts depending on the adapter. To catch them earlier, an adapter can be **dropped into a known-working C++ host** that already uses the same upstream library, and exercised against real workloads before the engine consumes it.
+
+Pattern source: integrating a freshly-built `libs/<x>-stack-adapter/` into a reference engine ([`engine-references.md`](engine-references.md) catalogs which engines use which upstream libraries — Luanti is the closest match for our use cases, since it ships voxel multiplayer on Linux + Windows + Android using SDL2 + ENet).
+
+**This is a workflow, not a build step.** Reference-engine integration work happens in a separate repo from `zigVoxelWorlds/` (the reference engine, possibly a personal fork). Code never flows from the reference engine back into zVoxRealms; only **insight**. The reverse direction — zVoxRealms adapter installed in the reference engine — is the validation path. See [`engine-references.md` § Legal](engine-references.md) for license discipline; Luanti's LGPL specifically forbids reverse code flow.
+
+### Tier A — best fit (clean swap or augmentation in a typical voxel reference engine)
+
+| Adapter | Why it validates well | Why it matters for zVoxRealms |
+| --- | --- | --- |
+| **Tracy** | Augmentation only — wrap `TracyZoneScoped` around hot loops in the reference engine's server tick + meshgen + map save. Doesn't replace anything. | Validates Zig-as-C++-build-system wiring on a real C++ host. Quick payoff: ~50 LoC integration in the reference. |
+| **Net (ENet)** | Many voxel reference engines (Luanti, Veloren, custom engines) already use ENet directly. Replace `#include <enet/enet.h>` with the adapter's C ABI calls. Real multi-client traffic exercises the wrapper. | **Strongest signal** for `modules/multiplayer/`. ENet API surface is small (~30 functions); good shape match. |
+| **meshoptimizer** | Add as a post-pass on the reference engine's chunk-mesh generator. Doesn't replace anything — augmentation. | Pre-validates the mesh-opt wrapper for `modules/voxel_core/` greedy-mesh output. |
+
+### Tier B — useful but moderate effort
+
+| Adapter | Notes |
+| --- | --- |
+| **Crashpad** | Replaces the reference engine's signal-handler scaffolding. Validates the crash-reporting pipeline (handler process, symbol upload, minidump) on a real shipped-binary scenario. |
+| **Dear ImGui** | Add as a debug overlay in the reference engine (does not replace formspec / native UI). Validates ImGui-stack adapter against an OpenGL context — useful portability check. |
+
+### Tier C — skip for reference-engine validation
+
+These adapters don't map cleanly onto a typical voxel reference engine's existing architecture; integration cost outweighs signal:
+
+- **Vulkan stack** — most voxel reference engines are OpenGL or Irrlicht-based; swapping the renderer is a full rewrite
+- **Platform stack** (SDL3) — if the reference uses SDL2 via IrrlichtMt (e.g. Luanti), the SDL3 swap is real but moderate work; if it uses GLFW/native, larger
+- **Physics (Jolt)** — coupled to the engine's node system; not a clean swap
+- **Audio (miniaudio)** — most voxel engines use OpenAL Soft; different shape
+- **UI (RmlUi)** — replacing the engine's UI is rewriting all UI code
+- **WASM (WAMR)** — replacing the engine's scripting layer is core-engine work
+- **NavMesh (Recast/Detour)** — most voxel engines have no NavMesh; you'd add a feature, not test the adapter against existing code
+
+### Workflow rules
+
+1. **One-way code flow**: zVox adapter → reference engine, never the reverse. Per [`engine-references.md` § Legal](engine-references.md): Luanti is LGPL — copying Luanti code into Apache-2.0 zVoxRealms is engine-killing.
+2. **Separate sessions**: don't open zVoxRealms + the reference repo in the same editor/LLM context. Cross-pollination is the realistic contamination vector for a solo dev.
+3. **Time-box each validation**: pick one concrete deliverable per adapter (e.g. "Tracy integrated around server tick + meshgen", "ENet swap behind the adapter's C ABI"). Don't open-end "modernize the reference."
+4. **Engine code never depends on the reference engine.** Validation lives separately. The output of a validation pass is: confidence + an adapter README note ("validated against \<host\> at \<version\>") + bug-fix commits in the adapter sub-repo if the validation surfaced issues.
+
+### Recommended sequence
+
+For zVoxRealms's Phase 1+ work:
+
+1. **Tracy first** (smallest, fast feedback on Zig-build wiring)
+2. **ENet second** (highest-signal — multiplayer is Phase 10 critical path)
+3. **meshoptimizer third** (Phase 4 / 6 mesh optimization landing)
+
+Tier B adapters (Crashpad, ImGui-stack) validate when their phases approach. Tier C adapters skip the reference-host validation entirely and validate directly in zVoxRealms when engine code lands.
+
+---
+
 ## §6. Forbidden by policy
 
 ### Categorical

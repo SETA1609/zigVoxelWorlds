@@ -29,11 +29,16 @@ Open a Vulkan window, render a debug primitive. Validates the platform layer + r
 
 Wires up:
 
-- [`libs/zig-cpp-platform-stack-adapter`](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) as `build.zig.zon` dep — engine imports `@import("platform")`; v0 backend is GLFW
+- [`libs/zig-cpp-platform-stack-adapter`](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) as `build.zig.zon` dep — engine imports `@import("platform")`; **backend is SDL3** (decision 2026-05-26 — see [`specs/platform.md`](specs/platform.md) and project memory `project-platform-backend-sdl3`). Swap the GLFW hello-world for the SDL3 backend during this phase.
 - [`libs/zig-cpp-vulkan-stack-adapter`](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) as `build.zig.zon` dep — engine imports `@import("vulkan_stack")`; re-exports vulkan-zig + wraps VMA/volk/shaderc
 - `src/render/surface.zig` bridge helper per [`specs/platform.md` § Rule 2](specs/platform.md) — pairs `platform.get*Handle(window)` with `vk_stack.create*Surface(instance, ...)` at comptime per target OS
 
-**Milestone:** colored rotating cube on screen via the GLFW v0 backend + the Vulkan-stack adapter. Action-mapped input (`platform.actionPressed(.menu_pause)`) quits the demo.
+**Validation track (parallel; separate repo, see [`external-libs-catalog.md` § 5.5](external-libs-catalog.md)):**
+
+- Tracy adapter validated against a reference C++ host (smallest Zig-build-wiring signal)
+- Outcome feeds into Phase 5's Tracy integration with confidence
+
+**Milestone:** colored rotating cube on screen via the SDL3 backend + the Vulkan-stack adapter. Action-mapped input (`platform.actionPressed(.menu_pause)`) quits the demo.
 
 ---
 
@@ -69,9 +74,11 @@ Spec: [`tech-stack.md` § Asset Pipeline](tech-stack.md#asset-pipeline-godotunre
 
 ## Phase 5: Jolt Physics Integration
 
-Built as `modules/physics_jolt/` behind `PhysicsServer`, via the `zig-jolt-adapter` sub-repo. Also wires the real Tracy backend behind `profile.zig`.
+Built as `modules/physics_jolt/` behind `PhysicsServer`, via the `libs/zig-cpp-physics-stack-adapter/` sub-repo (planned). Also wires the real Tracy backend behind `profile.zig`.
 
 Spec: [`specs/physics.md`](specs/physics.md). Adapter: [`external-libs-catalog.md` § 3](external-libs-catalog.md).
+
+**Validation track (parallel):** meshoptimizer mesh-stack adapter validated against a reference C++ host (clean augmentation pass on the host's chunk-mesh generator). Outcome pre-validates the wrapper for Phase 4 / 6 greedy-mesh output. See [`external-libs-catalog.md` § 5.5](external-libs-catalog.md).
 
 **Milestone:** player walks, falls, knocks things over; can profile a physics frame in standalone Tracy GUI.
 
@@ -140,6 +147,8 @@ Spec: [`specs/scene.md`](specs/scene.md).
 Built as `modules/multiplayer/` behind `NetServer`. Also wires the OpenTelemetry backend behind `log_sink.zig` + `metrics.zig` for dedicated-server observability.
 
 Spec: [`specs/multiplayer.md`](specs/multiplayer.md). Reference: [Luanti multiplayer + Unreal Iris](engine-references.md).
+
+**Validation track (pre-requisite):** ENet net-stack adapter validated against a reference C++ host **before this phase begins**. The reference host already uses ENet directly; swapping in our adapter exercises the C ABI under real multi-client traffic. Strongest signal of any pre-engine validation. See [`external-libs-catalog.md` § 5.5](external-libs-catalog.md).
 
 **Milestone:** 4 players co-op the dungeon-clear loop with acceptable latency; a dedicated-server instance ships tick-time p50/p95/p99 + player count to a local Grafana dashboard.
 
