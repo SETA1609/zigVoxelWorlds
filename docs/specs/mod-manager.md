@@ -116,12 +116,39 @@ incompatible = ["loot-overhaul"]
 
 ## Security / sandbox considerations
 
-Mods run native code (per [`engine-vs-game.md`](../engine-vs-game.md)). UI must:
+zVoxRealms uses a **two-tier mod runtime** model:
 
-- Show clearly when a mod includes native code (vs data-only)
-- Warn on first activation: "This mod includes a native plugin. Native mods can execute arbitrary code on your machine. Only enable mods you trust."
-- Once accepted per-mod, don't warn again (until version change)
-- Workshop subscriptions: Steam's reputation system filters most badness; show subscriber count + rating prominently
+| Tier | Runtime | Trust required | Perf | When to use |
+| --- | --- | --- | --- | --- |
+| **Native plugin** | `dlopen` / `LoadLibrary` against the stable C ABI | High — arbitrary code on the player's machine | ~native | Owner-signed mods, CI-curated content packs, trusted modders with reputation |
+| **WASM sandbox** | WAMR (`libs/zig-cpp-wasm-stack-adapter/`) against a curated Host API | Low — sandboxed, can't escape | ~50–70% of native | All third-party / Workshop / unsigned mods by default |
+
+### WASM-sandbox tier — hard rules
+
+1. **WASI is NOT exposed inside the sandbox.** WAMR optionally provides WASI (filesystem, env, network, process). For mod sandboxes this MUST stay disabled. The mod sees only the engine's curated Host API — a subset of the C ABI documented in [`specs/c-abi.md`](c-abi.md).
+2. **Resource limits per mod** — non-negotiable:
+   - **CPU budget per game tick** — default 1 ms per mod per 16 ms tick; mod exceeding budget gets paused with a "mod X is consuming too much time, disable?" prompt
+   - **Memory cap** — default 64 MB per mod's linear memory; configurable per project
+   - **Network access** — default DENY. Per-mod opt-in for HTTPS GET to specific allowlisted domains (e.g. asset CDN); never raw socket.
+   - **Filesystem access** — default DENY. The Host API provides scoped read/write to the mod's own data directory only.
+3. **No host-process exit** — `proc_exit` / abort intrinsics are intercepted; killing the mod doesn't kill the game.
+4. **Deterministic by default** — for multiplayer + replays, the sandboxed mod must be deterministic. WAMR's interpreter mode is deterministic; AOT mode needs verification per platform.
+
+### UI rules for the mod manager
+
+- Show clearly when a mod is **native plugin** vs **WASM sandbox** in the browser
+- Warn on first activation of a native-plugin mod: "This mod includes a native plugin. Native mods can execute arbitrary code on your machine. Only enable mods you trust."
+- Once accepted per-mod (native), don't warn again until version change
+- For WASM-sandboxed mods: no warning needed. They're sandboxed by definition.
+- Workshop subscriptions: Steam's reputation system filters most badness; show subscriber count + rating prominently. Default tier for Workshop mods is **WASM-sandbox** unless the publisher is signed by you.
+
+### Why the two-tier model
+
+- **Cross-platform mod packaging** — a `.wasm` mod ships one binary that runs on Linux/Windows/macOS/Android. Native mods need four builds.
+- **Trust spectrum** — content packs YOU sign (or first-party expansion mods) get native speed; community mods get safety.
+- **Reputation rebuilds** — even if a Workshop mod turns malicious, the worst it does is exit; can't exfil data, can't pivot to host machine, can't crash other players.
+
+Reference precedent: Luanti's Lua sandbox is the genre standard; WASM is the modern equivalent with better cross-language support (mod authors can write Rust, C++, AssemblyScript, Zig — all compile to WASM).
 
 ## Open decisions
 
