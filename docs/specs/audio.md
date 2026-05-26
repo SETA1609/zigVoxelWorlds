@@ -1,10 +1,59 @@
 # Audio Architecture Spec
 
-> Spatial audio + bus mixing + music streaming on top of miniaudio. Gap: [`gaps.md` § 2.1.C](../gaps.md). Reference patterns: [`gap-references.md` § 2.1.C](../gap-references.md).
+> Bus mixing + (optionally) spatial audio + music streaming. Two-backend swap pattern: SDL3 audio default + miniaudio opt-in. Gap: [`gaps.md` § 2.1.C](../gaps.md). Reference patterns: [`gap-references.md` § 2.1.C](../gap-references.md).
 
 ## Scope
 
-[`tech-stack.md`](../tech-stack.md) picks miniaudio as the platform / decode / mix backend. This spec is the engine layer on top: bus tree, 3D spatializer, reverb zones, music streaming.
+Engine layer for audio: bus tree, optional 3D spatializer, optional reverb zones, music streaming. Backed by **two interchangeable libraries**, selected per-project — see § Backend selection below.
+
+## Backend selection — SDL3 default, miniaudio opt-in
+
+Per project memory `project-subsystem-swap-pattern` (decision 2026-05-26):
+
+| Backend | Source | When to use | Trade-off |
+| --- | --- | --- | --- |
+| **SDL3 audio** (default) | `libs/zig-cpp-platform-stack-adapter/` (already vendors SDL3) | Most projects. arena_modes, rogue_tower, Atelier, possibly Stardew. | Smaller footprint (no extra dep). 2D pan + format conversion + decode. **No 3D spatial, no doppler, no reverb.** |
+| **miniaudio** (opt-in) | `libs/zig-cpp-audio-stack-adapter/` | Daggerfall + any project needing 3D spatial audio | +~200 KB binary. Full 3D spatializer + doppler + built-in DSP + better format support |
+
+Project chooses via:
+
+```toml
+# project.toml
+[audio]
+backend = "sdl3"        # default
+# backend = "miniaudio" # opt-in for richer spatial audio
+```
+
+Engine-facing Zig API in `src/audio/` is the **lowest common denominator with capability flags**:
+
+```zig
+const audio = @import("audio");
+
+// Always works, both backends
+audio.play(sound_handle);
+audio.setPan(sound_handle, 0.3);
+audio.setBusVolume(.sfx_player, 0.8);
+
+// Capability-gated — no-op on SDL3 backend
+if (audio.capabilities().has_3d_spatial) {
+    audio.set3DPosition(sound_handle, .{ .x = 5, .y = 0, .z = 12 });
+    audio.setListener(player.transform);
+}
+```
+
+`audio.capabilities()` returns at compile time so checks tree-shake:
+
+| Capability | SDL3 | miniaudio |
+| --- | --- | --- |
+| `play` / `pause` / `stop` | ✅ | ✅ |
+| `setPan` (2D L/R) | ✅ | ✅ |
+| `setVolume` per-source | ✅ | ✅ |
+| `has_3d_spatial` (positional + attenuation) | false | true |
+| `has_doppler` (velocity-based pitch shift) | false | true |
+| `has_reverb_zones` (per-region reverb effect) | false | partial |
+| `streaming_decode` (long music tracks) | ✅ | ✅ |
+
+This spec describes the engine layer on top of whichever backend the project selects: bus tree, optional 3D spatializer (miniaudio only), reverb zones (miniaudio only), music streaming.
 
 ## Bus tree
 

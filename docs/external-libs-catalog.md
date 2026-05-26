@@ -70,7 +70,7 @@ A thin Zig wrapper module (e.g. `src/wrappers/miniaudio.zig`) is fine if the C A
 | **cgltf** | <https://github.com/jkuhlmann/cgltf> | MIT | glTF 2.0 model parsing | 4 (Asset Pipeline) |
 | **stb_image** | <https://github.com/nothings/stb> | public domain | PNG/JPG/BMP decode at import | 4 |
 | **MikkTSpace** | <https://github.com/mmikk/MikkTSpace> | zlib | Universal tangent-space basis computation | 4 |
-| **miniaudio** | <https://github.com/mackron/miniaudio> | MIT-0 / public domain | Audio playback, mixing, streaming | 7.5 |
+| **miniaudio** (opt-in audio backend) | <https://github.com/mackron/miniaudio> | MIT-0 / public domain | **Opt-in richer audio backend per [`specs/audio.md`](specs/audio.md).** Default audio is SDL3 (via the platform-stack adapter); miniaudio is added via `project.toml [audio] backend = "miniaudio"` for 3D spatial, doppler, reverb. Daggerfall opts in; arena_modes / rogue_tower / likely Atelier + Stardew use SDL3 audio. | 7.5 |
 | **ENet** | <http://enet.bespin.org/> | MIT | UDP transport (candidate primary) | 10 (Multiplayer) |
 | **miniupnpc** | <http://miniupnp.free.fr/> | BSD-3 | UPnP port-forward for self-hosted dedicated servers | 10 |
 | **zstd** | <https://github.com/facebook/zstd> | BSD-3 (pin permissive) | Chunk + save compression | 6 / 13 |
@@ -136,7 +136,7 @@ C++ adapter code follows [`cpp-style.md`](cpp-style.md) — Google C++ Style Gui
 | **Dear ImGui** | <https://github.com/ocornut/imgui> | MIT | MIT | Editor / dev panels | 1 |
 | **ImGuizmo** | <https://github.com/CedricGuillemet/ImGuizmo> | MIT | MIT | 3D transform gizmos in the scene editor | 12 |
 | **imnodes** | <https://github.com/Nelarius/imnodes> | MIT | MIT | Node-graph UI for BT editor + material graph | 12 |
-| **RmlUi** | <https://github.com/mikke89/RmlUi> | MIT | MIT | **Shipped-game UI engine** — HTML-subset (RML) + CSS-subset (RCSS) runtime; behind the thin `src/ui/` Zig wrapper per [`specs/ui.md`](specs/ui.md). Bundled into a new `libs/zig-cpp-ui-stack-adapter/` sub-repo alongside FreeType (RmlUi's font backend) | 7.5 / 12 |
+| **RmlUi** | <https://github.com/mikke89/RmlUi> | MIT | MIT | **Document-UI layer (opt-in per project)** — HTML-subset (RML) + CSS-subset (RCSS) runtime for projects that need bespoke designed UI. Engine ships a widget kit on SDL3 primitives by default (see [`specs/ui.md`](specs/ui.md) § Two-layer architecture); RmlUi is added via `project.toml [ui] document = true`. Bundled into `libs/zig-cpp-ui-stack-adapter/` alongside FreeType. arena_modes does NOT link this; Daggerfall/Stardew/Atelier do. | 7.5 / 12 |
 | **HarfBuzz** | <https://github.com/harfbuzz/harfbuzz> | MIT | MIT | Complex-script text shaping (CJK, Arabic, Devanagari) | 7.5 |
 | **msdfgen** | <https://github.com/Chlumsky/msdfgen> | MIT | MIT | Multi-channel SDF font atlas generation (editor-time) | 7.5 / 12 |
 | **msdf-atlas-gen** | <https://github.com/Chlumsky/msdf-atlas-gen> | MIT | MIT | Atlas packing on top of msdfgen (editor-time only) | 12 |
@@ -236,7 +236,7 @@ Backend changes are sub-repo-internal; the engine never sees them. The same Zig 
 
 What's deliberately **not** in the platform stack:
 
-- **Audio** — miniaudio handles its own platform abstraction (PulseAudio/ALSA/CoreAudio/WASAPI inside miniaudio). Pairing it with the platform layer wouldn't reduce coupling
+- **Audio** — the default audio backend is SDL3 itself (audio is part of the SDL3 vendored set already). miniaudio is the opt-in richer-audio backend per [`specs/audio.md`](specs/audio.md); when enabled, miniaudio handles its own platform abstraction (PulseAudio/ALSA/CoreAudio/WASAPI inside miniaudio). Both backends route through `src/audio/`'s LCD Zig API.
 - **Vulkan rendering** — separate Vulkan-stack adapter; only the surface-creation handoff crosses the boundary
 - **High-level input mapping (UI focus graph, mod-defined actions)** — engine code in `src/input/` consumes the platform layer's raw input + action-mapped events but adds the focus graph / mod-action layers itself
 - **Filesystem watcher** — `filewatch` (§2) is small and works on raw paths; doesn't need platform-adapter integration

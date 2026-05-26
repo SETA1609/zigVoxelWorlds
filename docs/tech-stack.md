@@ -30,7 +30,21 @@ If a Zig-native option exists and is roughly comparable, prefer Zig.
 - **SDL3** via the `libs/zig-cpp-platform-stack-adapter/` adapter (decision 2026-05-26 — see [`specs/platform.md`](specs/platform.md) and project memory `project-platform-backend-sdl3`).
 - Backend chosen for Android + Steam Deck + future Switch coverage. GLFW was the earlier choice; dropped because no Android support and weaker Wayland / Steam-Input integration.
 - The pure-Zig native v1.x migration is **withdrawn**. Maintaining native X11 / Wayland / Win32 / Android backends in pure Zig was always aspirational for a solo team; SDL3 already covers all those platforms with shipped reliability.
-- The platform-stack adapter scope expands to include: window + events + input + time + file I/O + native handle getters (as before) **plus** SDL3-provided gamepad (Steam Input mapping), sensor (Steam Deck gyro / mobile IMU), haptic (rumble), clipboard, filesystem paths (XDG / FOLDERID / NSDirectory / Android internal storage), power info, and IME / text input. These fold in for free; they would have been per-OS code otherwise.
+- The platform-stack adapter scope expands to include: window + events + input + time + file I/O + native handle getters (as before) **plus** SDL3-provided gamepad (Steam Input mapping), sensor (Steam Deck gyro / mobile IMU), haptic (rumble), clipboard, filesystem paths (XDG / FOLDERID / NSDirectory / Android internal storage), power info, IME / text input, **2D rendering primitives (`SDL_Renderer`)** for the widget kit, and **basic audio (`SDL_AudioStream`)** as the default audio backend. These fold in for free; they would have been per-OS code otherwise.
+
+## Subsystem swap pattern — SDL3 default + dedicated-lib opt-in
+
+For subsystems where SDL3 covers the common-case need but a dedicated library offers richer capabilities, the engine ships **SDL3 as the default + the dedicated library as an opt-in per-project upgrade**. Per project memory `project-subsystem-swap-pattern` (2026-05-26):
+
+| Subsystem | SDL3 default (always available) | Opt-in dedicated lib | Trigger |
+| --- | --- | --- | --- |
+| **Audio** | SDL3 audio via platform-stack: playback, 2D pan, format conversion | miniaudio via `libs/zig-cpp-audio-stack-adapter/` | `project.toml [audio] backend = "miniaudio"` — for 3D spatial / doppler / reverb |
+| **In-game UI** | Engine widget kit at `src/ui/widgets/` (~20 reusable widgets on `SDL_Renderer` + `SDL_ttf` primitives — ALWAYS ships) | RmlUi document layer via `libs/zig-cpp-ui-stack-adapter/` for bespoke RML/RCSS-authored screens | `project.toml [ui] document = true` — links the RmlUi adapter |
+| **Other SDL3 features** (gamepad, sensor, haptic, clipboard, paths, IME, power) | SDL3 via platform-stack | n/a — SDL3 is the canonical layer; no richer alternative worth swapping to | always SDL3 |
+
+**The UI case is NOT a single-API swap** — widgets (immediate-mode primitives) and document UI (retained-mode document tree) are different abstractions, not interchangeable backends of one. See [`specs/ui.md`](specs/ui.md) § Two-layer architecture.
+
+**The audio case IS a clean swap** — both backends model the same operations; `src/audio/` exposes one Zig API with capability flags.
 
 ## Math
 

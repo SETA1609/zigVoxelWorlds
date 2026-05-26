@@ -49,6 +49,14 @@ The Megabonk inspiration does **NOT** live in:
 | Server-authoritative validation (PvP) | `modules/multiplayer/` |
 | Voxel arena geometry + storm boundary mutations | `modules/voxel_core/` |
 | Particle / projectile rendering | `backends/vulkan/` (instanced particles TBD) |
+| HUD widgets (health bar, hotbar, match-over modal, kill feed) | `src/ui/widgets/` — pre-built, SDL3-backed, ships in every project |
+
+**arena_modes is the small-footprint reference configuration.** Per project memory `project-subsystem-swap-pattern`:
+
+- `[audio] backend = "sdl3"` — SDL3 audio is enough for arena combat; no miniaudio dep
+- `[ui] document = false` — widgets only; no RmlUi adapter linked
+
+This keeps the v1.0 shipping target lean — the smallest binary surface across the five target games. Daggerfall et al. opt into miniaudio + RmlUi.
 
 The arena mode is **thin** because everything substantive is reused. The module just orchestrates the match.
 

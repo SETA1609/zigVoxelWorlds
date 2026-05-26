@@ -1,47 +1,89 @@
 # In-Game UI Engine Spec
 
-> The runtime UI engine — HUDs, menus, dialog, inventory. ImGui handles editor UI; this spec is for shipped-game UI. Gap: [`gaps.md` § 2.1.D](../gaps.md). Reference patterns: [`gap-references.md` § 2.1.D](../gap-references.md).
+> The runtime UI engine — HUDs, menus, dialog, inventory. ImGui handles **editor** UI; this spec is for **shipped-game** UI only. Gap: [`gaps.md` § 2.1.D](../gaps.md). Reference patterns: [`gap-references.md` § 2.1.D](../gap-references.md).
 
 ## Scope
 
-A declarative UI engine for shipped games — HUDs, menus, dialog, inventory. Renders through `RenderServer` like everything else. Editor-time editing via a dedicated UI panel in `src/editor/panels/ui_designer/` (Phase 12).
+A UI system for shipped games, organized as **two orthogonal layers** (decision 2026-05-26 — see project memory `project-subsystem-swap-pattern`). Renders through `RenderServer` like everything else.
 
-## v1 implementation: RmlUi behind the UI-stack adapter
+## Two-layer architecture
 
-**Decision (Phase 0):** v1 ships [RmlUi](https://github.com/mikke89/RmlUi) (MIT) as the runtime UI engine. The wrapper that hides RmlUi specifics lives in `libs/zig-cpp-ui-stack-adapter/` (planned submodule), **not** in `src/ui/`. This is the same decoupling pattern the project uses for every other C++ dependency (Vulkan, Platform, …) — see [`external-libs-catalog.md` § 3](../external-libs-catalog.md).
+```text
+                       ┌─────────────────────────────────────┐
+                       │ Engine + game code calls `src/ui/`   │
+                       └────────┬───────────────────┬────────┘
+                                │                   │
+                                ▼                   ▼
+              ┌────────────────────────┐   ┌──────────────────────────────┐
+              │ src/ui/widgets/         │  │ src/ui/document.zig           │
+              │ ───────────────         │  │ ──────────────────            │
+              │ ALWAYS SHIPS            │  │ OPT-IN per project            │
+              │ ~20 reusable widgets    │  │ Custom RML/RCSS authored UI   │
+              │ on SDL3 primitives      │  │ via the libs/ adapter         │
+              │ ~2–3k Zig LoC engine    │  │ ~50k C++ LoC vendored         │
+              └────────┬───────────────┘   └────────┬─────────────────────┘
+                       │                            │
+                       ▼                            ▼
+           ┌─────────────────────────┐   ┌──────────────────────────────────┐
+           │ libs/zig-cpp-platform-  │   │ libs/zig-cpp-ui-stack-adapter/    │
+           │ stack-adapter/ (SDL3)    │  │ (RmlUi + FreeType)                │
+           │ SDL_Renderer, SDL_ttf,   │  │ Document tree + RCSS cascade +    │
+           │ input, gamepad input     │  │ layout engine + animations        │
+           └─────────────────────────┘   └──────────────────────────────────┘
+```
+
+### Layer 1 — widget kit (`src/ui/widgets/`) — always available
+
+Engine-provided retained-mode widgets built on SDL3 primitives. **Every project ships these** because every target game needs HUD-level UI. ~2–3k Zig LoC engine code.
+
+Widget set (v1.0):
+
+| Category | Widgets |
+| --- | --- |
+| Primitives | `Label`, `Button`, `Image`, `Panel` (background container) |
+| Layout | `HBox`, `VBox`, `Grid` (simple containers — no flex / cascade) |
+| Game HUD | `ProgressBar` (health/mana/XP), `HotbarSlot` (10-slot bar), `InventoryCell` |
+| Containers | `ListView` (scrollable), `Modal` (overlay), `Tabs`, `Dropdown`, `Tooltip`, `Toast` (notification) |
+| Input | `TextInput` (single-line), `Checkbox`, `Slider` |
+
+Properties:
+
+- Retained-mode (you create a widget, it persists, events propagate)
+- Pre-themed; theme is a single struct (no style cascade)
+- Controller-navigable via `focus_neighbors` (per `specs/platform.md` action-mapped input)
+- Pure Zig, calls SDL3 through the platform-stack adapter
+- No external dependency — ships in every project including arena_modes
+
+When to use: HUDs, simple menus, pause overlay, settings screens, prototyping any UI fast.
+
+### Layer 2 — document UI (`src/ui/document.zig`) — opt-in via the libs adapter
+
+Custom RML (HTML-subset) + RCSS (CSS-subset) document UI via [RmlUi](https://github.com/mikke89/RmlUi). For bespoke, polished screens that need a real document model + style cascade + transitions + animations.
+
+Project links the document UI by enabling it in `project.toml`:
+
+```toml
+[ui]
+document = true      # links libs/zig-cpp-ui-stack-adapter/ (RmlUi)
+# document = false   # default — widgets only, no RmlUi adapter
+```
+
+When `document = false`, the entire RmlUi adapter is tree-shaken out of the build. arena_modes ships this way: widgets-only, no RmlUi adapter, smaller binary.
+
+When to use: full menus with complex layout, dialog UI with rich text, spell-crafting screens, synthesis screens, anything where the project wants bespoke design that pre-made widgets can't deliver cleanly.
+
+### Why two orthogonal layers, not one swap-API
+
+Audio works as a single-API swap because SDL3 audio and miniaudio model the same operation. UI doesn't — `SDL_Renderer` (immediate-mode draw primitives) and RmlUi (retained-mode document tree) are fundamentally different abstractions. Trying to force them into one Zig API would either:
+
+- Throw away RmlUi's power (LCD = drawing primitives only)
+- Force document conventions onto SDL3 (defeats the small-footprint goal)
+
+Two layers preserves both use cases cleanly. The two layers can coexist in one screen (HUD widgets over a document UI background, or vice versa) when needed.
 
 ### Two-layer split
 
-```text
-┌───────────────────────────────────────────────────────────────┐
-│ src/ui/                                                       │
-│ ───────                                                       │
-│ Thin Zig API the engine + gameplay code calls.                │
-│ Just typed bindings to the adapter's C ABI + engine glue      │
-│ (i18n mustache, asset-DB hooks, gamepad input routing).       │
-│ Knows the C ABI. Does NOT know about RmlUi.                   │
-└─────────────────────┬─────────────────────────────────────────┘
-                      │ stable C ABI: zvui_document_load, …
-                      ▼
-┌───────────────────────────────────────────────────────────────┐
-│ libs/zig-cpp-ui-stack-adapter/                                │
-│ ──────────────────────────────                                │
-│ The actual wrapper.                                           │
-│   - RmlUi vendored as the backend lib                         │
-│   - FreeType bundled (RmlUi's glyph backend)                  │
-│   - C++ binding layer translating RmlUi types ↔ C ABI         │
-│   - The only code that #includes <RmlUi/...>                  │
-│ Distributed as its own repo, owns its build.zig + LICENSE.    │
-└───────────────────────────────────────────────────────────────┘
-```
-
-### Why this split
-
-- **Swapping to a future native impl is a libs adapter change, not an engine change.** Replace `libs/zig-cpp-ui-stack-adapter/`'s implementation with native code (or another lib like Yoga, RmlUi successor, etc.); the C ABI stays; `src/ui/` doesn't recompile.
-- **No `<RmlUi/*>` headers anywhere in `zigVoxelWorlds/`** — they live exclusively inside the adapter sub-repo. The engine tree never sees them. Same discipline as Vulkan + Jolt.
-- **The adapter's `LICENSE` is its own** — RmlUi MIT obligations are tracked in `libs/zig-cpp-ui-stack-adapter/LICENSE`, not at the engine root. Standard per [`external-libs-catalog.md` § 3](../external-libs-catalog.md).
-
-### Why RmlUi over custom TOML+SCSS
+### Why RmlUi for the document layer (not custom TOML+SCSS)
 
 - Style cascade + transitions + animations + flex layout = ~5–7k LoC of engine code that RmlUi already ships solid.
 - Mod authors get HTML/RCSS (a well-known mental model) instead of a bespoke TOML/SCSS dialect with no IDE support.
@@ -49,7 +91,11 @@ A declarative UI engine for shipped games — HUDs, menus, dialog, inventory. Re
 
 **Out of scope for v1:** writing a custom TOML+SCSS parser, custom layout engine, custom style resolver. Re-evaluate at end of Phase 12 — see [§ Off-ramp](#off-ramp-to-a-native-implementation).
 
-The sections below describe the **engine-visible UI contract** — anchor layout, widget set, focus graph, quickbar behavior. They're written in implementation-neutral terms so the contract survives a future adapter swap.
+### Adapter discipline
+
+For the document layer, the engine never touches RmlUi types directly. The `libs/zig-cpp-ui-stack-adapter/` sub-repo holds the C++ wrapper; `src/ui/document.zig` is thin Zig bindings to its stable C ABI. **No `<RmlUi/*>` includes anywhere in `zigVoxelWorlds/`.** Same discipline as Vulkan + Jolt + SDL3 — wrap once, swap-friendly forever. The adapter's `LICENSE` lives in the sub-repo, not at engine root.
+
+The sections below describe the **engine-visible UI contract** common to both layers — anchor layout, focus graph, quickbar behavior. Widget-layer specifics use immediate-mode-style imperative state; document-layer specifics use RML/RCSS files. The contract is written in implementation-neutral terms.
 
 ## Layout model
 
