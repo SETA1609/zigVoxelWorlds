@@ -45,7 +45,7 @@ Pure Zig dependencies pulled in via `build.zig.zon`. No C, no `@cImport`, no ada
 
 | Library | Upstream | Role | Phase |
 | --- | --- | --- | --- |
-| **TOML parser** (zig-toml or similar) | <https://github.com/sam701/zig-toml> | TOML parsing for project data, manifests, scenes | 2 |
+| **TOML parser** — must support **comment-and-formatting-preserving round-trip** (read → edit → write back without destroying user-authored comments) per [`specs/editor.md`](specs/editor.md) § Dual-authoring. Candidates: zig-toml + a custom CST layer, OR vendor `toml-edit` (Rust) via cbindgen, OR fork toml++ with a preserving emit pass. Plain "parse to struct, emit struct" libraries do NOT meet this requirement. | n/a — selection deferred until editor panel work begins (Phase 11/12) | TOML parsing + editor round-trip for project data, manifests, scenes, themes | 2 (read-only) / 11–12 (round-trip editor) |
 | **Math** | hand-written, or zig-gamedev/math | Vectors, matrices, quaternions, SIMD helpers | 1 |
 | **Containers** | `std` | Hash maps, ArrayLists, etc. | always |
 | **Allocators** | `std` | Arena, fixed-buffer, GeneralPurposeAllocator | always |
