@@ -8,9 +8,9 @@ This was previously placed under `src/modding/`. Moved here so the mod-loader it
 
 - Layered loader — overlay sequence: `core_pack/` (base game) → `<project>/data/` → `<project>/mods/<mod>/` (last wins). Same shape as Luanti's `builtin/` + `games/` + `mods/`.
 - Mod manifest (TOML) — declares dependencies, load order, supported engine version, optional native plugin path
-- **Two-tier mod runtime** (per project memory `project-mod-runtime-two-tier`):
-  - Native plugin loader — `dlopen`/`LoadLibrary` mod plugins against the engine's **stable C ABI** ([`specs/c-abi.md`](../../docs/specs/c-abi.md)). Tier reserved for signed first-party / curated content; full perf, full trust.
-  - WASM sandbox via WAMR (`libs/zig-cpp-wasm-stack-adapter/`). Default tier for third-party / Workshop mods. WASI NOT exposed; per-mod resource limits (1 ms/tick CPU, 64 MB memory, network-deny, fs scoped); deterministic for multiplayer. See [`specs/mod-manager.md`](../../docs/specs/mod-manager.md) § Security / sandbox considerations.
+- **Two-tier mod runtime with per-project trust root** (per project memory `project-mod-runtime-two-tier`):
+  - Native plugin loader — `dlopen`/`LoadLibrary` mod plugins against the engine's **stable C ABI** ([`specs/c-abi.md`](../../docs/specs/c-abi.md)). Tier reserved for content **Ed25519-signed by the project publisher's key**. The pubkey is baked into the shipped launcher binary at export time (not into the engine); each game has its own. Full perf, full trust.
+  - WASM sandbox via WAMR (`libs/zig-cpp-wasm-stack-adapter/`). Default tier for **all** community content — Workshop mods, sideloaded mods, SDK-built mods, anything not publisher-signed. WASI NOT exposed; per-mod resource limits (1 ms/tick CPU, 64 MB memory, network-deny, fs scoped); deterministic for multiplayer. See [`specs/mod-manager.md`](../../docs/specs/mod-manager.md) § Security / sandbox considerations.
 - Asset overlay — mod assets shadow base assets by GUID match
 - Data overlay — mod TOML extends / overrides base data (recipes, spells, NPC tables, …)
 

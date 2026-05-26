@@ -116,12 +116,36 @@ incompatible = ["loot-overhaul"]
 
 ## Security / sandbox considerations
 
-zVoxRealms uses a **two-tier mod runtime** model:
+zVoxRealms uses a **two-tier mod runtime** with a **per-project trust root** (decision 2026-05-26):
 
-| Tier | Runtime | Trust required | Perf | When to use |
+| Tier | Runtime | Eligibility | Perf | When |
 | --- | --- | --- | --- | --- |
-| **Native plugin** | `dlopen` / `LoadLibrary` against the stable C ABI | High — arbitrary code on the player's machine | ~native | Owner-signed mods, CI-curated content packs, trusted modders with reputation |
-| **WASM sandbox** | WAMR (`libs/zig-cpp-wasm-stack-adapter/`) against a curated Host API | Low — sandboxed, can't escape | ~50–70% of native | All third-party / Workshop / unsigned mods by default |
+| **Native plugin** | `dlopen` / `LoadLibrary` against the stable C ABI | **Only mods packaged as `.zvxmod` and Ed25519-signed by the project publisher's key** (the owner of the *game*, not of the engine) | ~native | The shipped project itself, official DLC, owner-curated extra content. NOT third-party mods, no matter who made them. |
+| **WASM sandbox** | WAMR (`libs/zig-cpp-wasm-stack-adapter/`) against a curated Host API | **Everything else** — Workshop mods, sideloaded mods, any content using the public SDK to write mods, anything without a valid publisher signature | ~50–70% of native | Default + only tier for third-party content |
+
+### Trust model: the *project* is the trust unit, not the *engine*
+
+Each game built on zVoxRealms is its own trust domain. The engine itself doesn't ship with any baked-in publishing key; the game's **launcher binary** does. Specifically:
+
+- **Project publisher** (the owner of the game — the developer, not the zVoxRealms maintainer) generates an Ed25519 keypair once via `zvox-keygen`. Private key stored offline / in CI secrets / on hardware token. Public key tracked at `<project>/publisher.pub`.
+- **At export time** (per [`src/editor/export/`](../../src/editor/export/README.md)), the export pipeline reads `publisher.pub` and bakes it into the launcher binary as `const PROJECT_PUBKEY: [32]u8 = …;`. The launcher's mod loader uses that baked pubkey to verify signatures.
+- **Each shipped game has its own pubkey.** Game A's launcher trusts only Game A's publisher; Game B trusts only Game B's. Mods crossing between games never carry trust.
+
+### What gets signed by the project publisher
+
+- The **base project** (the game itself — its `libzvox-runtime.so` + the official PCK)
+- **Official DLCs** — paid or free expansion content
+- **Owner-curated extra content** — community content the publisher has reviewed and adopted as official
+
+### What does NOT get signed
+
+- **SDK-built mods from anyone except the project publisher** — even if the modder is reputable, even if they use the project's mod SDK
+- **Workshop mods** — by definition third-party, always WASM-sandboxed
+- **Sideloaded community mods** — same
+
+The pattern: anything **the project publisher shipped or adopted** = signed, native tier. Anything **the mod community produced** = WASM, regardless of source. The publisher's choice on what to officially adopt is the only path to native-tier trust.
+
+**Hard rule:** the launcher has exactly ONE trust root — the project publisher's Ed25519 public key compiled into the launcher binary at export time. Binary classification: signed-by-publisher OR sandboxed. **No plaintext "trusted publishers" file, no TOFU, no per-user trust override** — any of those would be text-editable and defeat the sandbox entirely.
 
 ### WASM-sandbox tier — hard rules
 
@@ -145,10 +169,28 @@ zVoxRealms uses a **two-tier mod runtime** model:
 ### Why the two-tier model
 
 - **Cross-platform mod packaging** — a `.wasm` mod ships one binary that runs on Linux/Windows/macOS/Android. Native mods need four builds.
-- **Trust spectrum** — content packs YOU sign (or first-party expansion mods) get native speed; community mods get safety.
-- **Reputation rebuilds** — even if a Workshop mod turns malicious, the worst it does is exit; can't exfil data, can't pivot to host machine, can't crash other players.
+- **Trust spectrum** — content the project publisher signs (or signs adopted community content) runs at native speed; community mods run sandboxed regardless of reputation
+- **Reputation rebuilds** — even if a Workshop mod turns malicious, the worst it does is exit; can't exfil data, can't pivot to host machine, can't crash other players
 
-Reference precedent: Luanti's Lua sandbox is the genre standard; WASM is the modern equivalent with better cross-language support (mod authors can write Rust, C++, AssemblyScript, Zig — all compile to WASM).
+### Signing pipeline (per-project)
+
+1. **One-time keygen** — project publisher runs `zvox-keygen --out publisher` on an offline machine. Produces `publisher.pub` (commit to repo) + `publisher.priv` (NEVER commit; store on hardware token or CI secret).
+2. **Publisher pubkey baked into the launcher at export.** The export tool (per [`src/editor/export/`](../../src/editor/export/README.md)) reads `publisher.pub` and inlines it as `PROJECT_PUBKEY` in the generated launcher source before compilation. Editing the launcher binary after export to change the key is technically possible but breaks code signatures on Windows / macOS / Steam, so the trust boundary holds on shipped builds.
+3. **Signing DLCs / extra content** — publisher runs `zvox-sign --key publisher.priv content/ --out my-dlc.zvxmod` on their secure-key machine. Produces a `.zvxmod` archive with manifest + content + Ed25519 signature over SHA-256(manifest + content tree).
+4. **Verification at install / load** in the shipped launcher — compute hash, verify signature against the baked `PROJECT_PUBKEY`, route to native tier on success or WASM tier on any failure (no signature / bad signature / modified contents). Failure is silent — the content just runs sandboxed.
+
+### Revocation
+
+- **Compromised publisher key** — ship a launcher update (engine + new pubkey baked in). Old-key-signed content stops being trusted.
+- **Specific bad content** — launcher update can include a revocation list of signature hashes; affected content falls back to WASM tier or gets blocked entirely.
+- This is "limited revocation" — no online CRL service. Acceptable for indie scope.
+
+### Editor-time vs launcher-time
+
+- **Editor** (developer environment): no signature verification. The developer IS the publisher; everything in their own project tree is trusted by definition. If they want to playtest the signing flow, they can run `zvox-sign` locally and pass the signed `.zvxmod` to the launcher's mod loader path.
+- **Exported launcher** (player environment): signature verification enforced. The baked `PROJECT_PUBKEY` is the only trust root.
+
+Reference precedent: Luanti's Lua sandbox is the genre standard for sandboxed modding; the per-project signing model resembles Steam's per-publisher signed-binary approach combined with WASM's cross-platform sandbox. WASM is the modern multi-language equivalent to Lua (mod authors can write Rust, C++, AssemblyScript, Zig — all compile to WASM).
 
 ## Open decisions
 
