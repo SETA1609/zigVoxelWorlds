@@ -27,7 +27,7 @@ If a Zig-native option exists and is roughly comparable, prefer Zig.
 
 ## Windowing & Input
 
-- **SDL3** via the `libs/zig-cpp-platform-stack-adapter/` adapter (decision 2026-05-26 — see [`specs/platform.md`](specs/platform.md) and project memory `project-platform-backend-sdl3`).
+- **SDL3** via the `libs/zig-cpp-platform-stack-adapter/` adapter (decision 2026-05-26 — see [`specs/platform.md`](specs/platform.md) and project memory `project-platform-backend-sdl3`). SDL3 is built through the [`castholm/SDL`](https://github.com/castholm/SDL) `build.zig.zon` dependency (pinned; HIDAPI elected as BSD-3-Clause to stay GPL-free), not a vendored submodule — see [`external-libs-catalog.md` § Building SDL3](external-libs-catalog.md).
 - Backend chosen for Android + Steam Deck + future Switch coverage. GLFW was the earlier choice; dropped because no Android support and weaker Wayland / Steam-Input integration.
 - The pure-Zig native v1.x migration is **withdrawn**. Maintaining native X11 / Wayland / Win32 / Android backends in pure Zig was always aspirational for a solo team; SDL3 already covers all those platforms with shipped reliability.
 - The platform-stack adapter scope expands to include: window + events + input + time + file I/O + native handle getters (as before) **plus** SDL3-provided gamepad (Steam Input mapping), sensor (Steam Deck gyro / mobile IMU), haptic (rumble), clipboard, filesystem paths (XDG / FOLDERID / NSDirectory / Android internal storage), power info, IME / text input, **2D rendering primitives (`SDL_Renderer`)** for the widget kit, and **basic audio (`SDL_AudioStream`)** as the default audio backend. These fold in for free; they would have been per-OS code otherwise.

@@ -212,7 +212,7 @@ const render   = @import("render");   // engine's own bridge module
 const window = try platform.Window.create(.{
     .title = "zVoxRealms",
     .size = .{ .w = 1280, .h = 720 },
-    .vulkan_compatible = true,
+    .renderer = .vulkan,
 });
 
 while (platform.nextEvent()) |ev| switch (ev) {
@@ -236,12 +236,27 @@ Backend changes are sub-repo-internal; the engine never sees them. The same Zig 
 
 What's deliberately **not** in the platform stack:
 
-- **Audio** — the default audio backend is SDL3 itself (audio is part of the SDL3 vendored set already). miniaudio is the opt-in richer-audio backend per [`specs/audio.md`](specs/audio.md); when enabled, miniaudio handles its own platform abstraction (PulseAudio/ALSA/CoreAudio/WASAPI inside miniaudio). Both backends route through `src/audio/`'s LCD Zig API.
+- **Audio** — the default audio backend is SDL3 itself (audio is part of SDL3, built via castholm/SDL, already). miniaudio is the opt-in richer-audio backend per [`specs/audio.md`](specs/audio.md); when enabled, miniaudio handles its own platform abstraction (PulseAudio/ALSA/CoreAudio/WASAPI inside miniaudio). Both backends route through `src/audio/`'s LCD Zig API.
 - **Vulkan rendering** — separate Vulkan-stack adapter; only the surface-creation handoff crosses the boundary
 - **High-level input mapping (UI focus graph, mod-defined actions)** — engine code in `src/input/` consumes the platform layer's raw input + action-mapped events but adds the focus graph / mod-action layers itself
 - **Filesystem watcher** — `filewatch` (§2) is small and works on raw paths; doesn't need platform-adapter integration
 
 Reference patterns: we adopt [SDL3](https://www.libsdl.org/) directly (one stable C API across decades; X11/Wayland/Cocoa/Win32/Android backends rotate underneath). The Zig-native wrap means the engine sees a Zig API, never raw SDL — same C-ABI-only-across-boundary discipline as every other adapter.
+
+#### Building SDL3 — via `castholm/SDL` (`build.zig.zon` dependency)
+
+SDL3 itself is built through [`castholm/SDL`](https://github.com/castholm/SDL) — *"a port of SDL to the Zig build system, packaged for the Zig package manager"* (decision 2026-05-27, supersedes the earlier "vendor `vendor/SDL/` as a git submodule" plan in [`sprint.md` B.2](sprint.md)). The adapter declares it in `build.zig.zon` and links the `SDL3` artifact from its `build.zig`. This is **build packaging, not Zig bindings** — the adapter still calls SDL's C API via `@cImport` behind its `extern "C"`/Zig wrapper, same C-ABI-only-across-the-boundary discipline as every other §3 adapter.
+
+**Why this over a hand-rolled submodule + own `build.zig`:** castholm/SDL already maintains the cross-compile `build.zig` across the targets we ship — x86_64 Windows-GNU + Linux-GNU (first-class), aarch64 macOS, WebAssembly/Emscripten — which is exactly the per-OS build work we'd otherwise re-derive solo. It tracks upstream `release-3.4.x`; current pin is SDL 3.4.8 (its `v0.5.0`).
+
+**License — clears the no-GPL hard rule (§6).** SDL3 core is **zlib**. The package's aggregate SPDX expression contains `GPL-3.0`, but only inside `(BSD-3-Clause OR GPL-3.0 OR HIDAPI)` — that is **HIDAPI's tri-license** (SDL's HID/gamepad backend), a *choice*, not an obligation. We **elect BSD-3-Clause**, so the GPL arm never applies; everything else in the expression is permissive (Apache-2.0, MIT, BSD-3-Clause, CC0-1.0, Unlicense, HPND-sell-variant, SunPro, Zlib). Record the HIDAPI = BSD-3-Clause election in [`LICENSES.md`](../LICENSES.md) per §6's dual-license rule. Consistent with SDL's own [licensing FAQ](https://wiki.libsdl.org/SDL3/FAQLicensing) (zlib core; test/example code public domain).
+
+**Caveats to manage:**
+
+- **Zig-version coupling** — targets Zig `0.15.2` / `0.16.0-dev (master)` and tracks Zig closely. **Pin the dependency to a specific tag/commit in `build.zig.zon` (don't float)**; bump it deliberately alongside our own `minimum_zig_version` bumps.
+- **Single maintainer, PRs disabled** (issues only). Low lock-in mitigation: it's a thin, forkable `build.zig` over upstream SDL — if it stalls, fork it into the adapter sub-repo and carry it ourselves.
+- **macOS cross-compile from a Linux/Windows host is unsupported** (Apple SDK licensing) — producing mac artifacts needs a mac runner. Affects CI, not the Linux dev loop.
+- **No satellite libs** (SDL_image / SDL_ttf / SDL_mixer) — core SDL3 only. SDL_image/SDL_mixer are already forbidden (§6 → stb_image / miniaudio). **SDL_ttf is the open thread:** [`tech-stack.md`](tech-stack.md) and [`specs/ui.md`](specs/ui.md) describe the widget kit on "`SDL_Renderer` + `SDL_ttf` primitives", yet the catalog's text stack is FreeType (§2) + HarfBuzz + msdfgen (§3). Reconcile one way: either the widget kit rasterizes via FreeType (drop the `SDL_ttf` wording) or SDL_ttf gets its own packaging (castholm/SDL doesn't provide it). Tracked as a follow-up; does not block the window/input/event milestone.
 
 Detailed contract: [`specs/platform.md`](specs/platform.md).
 

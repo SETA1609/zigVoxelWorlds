@@ -1,6 +1,6 @@
 # Platform Adapter Spec
 
-> The stable Zig API for window, events, action-mapped input, time, file I/O, per-OS native handle getters, gamepad, sensor, haptic, clipboard, filesystem paths, power, and IME. Lives as a sub-repo at `libs/zig-cpp-platform-stack-adapter/`. **SDL3 is the backend** (decision 2026-05-26). The "single Zig package, multiple backends as source files" architecture below is retained so a future native or alternate backend can be added without engine source changes — but no such alternate is planned for v1.0.
+> The stable Zig API for window, events, action-mapped input, time, file I/O, per-OS native handle getters, gamepad, sensor, haptic, clipboard, filesystem paths, power, and IME. Lives as a sub-repo at `libs/zig-cpp-platform-stack-adapter/`. **SDL3 is the backend** (decision 2026-05-26), built via the [`castholm/SDL`](https://github.com/castholm/SDL) `build.zig.zon` dependency — not vendored (see [`../external-libs-catalog.md` § Building SDL3](../external-libs-catalog.md)). The "single Zig package, multiple backends as source files" architecture below is retained so a future native or alternate backend can be added without engine source changes — but no such alternate is planned for v1.0.
 >
 > This adapter has **no Vulkan dependency and no dependency on any other adapter.** Surface creation lives in [`zig-cpp-vulkan-stack-adapter`](https://github.com/SETA1609/zig-cpp-vulkan-stack-adapter) via its own per-OS `createX11Surface` / `createWaylandSurface` / `createWin32Surface` / `createAndroidSurface` functions. The engine bridges with a small helper (`src/render/surface.zig`) that calls a platform getter and the matching vulkan creator. **Both adapters are fully standalone** — no shared types, no cross-imports.
 >
@@ -25,7 +25,7 @@ const render   = @import("render");   // engine's own bridge module
 const window = try platform.Window.create(.{
     .title = "zVoxRealms",
     .size = .{ .w = 1280, .h = 720 },
-    .vulkan_compatible = true,
+    .renderer = .vulkan,
 });
 
 while (platform.nextEvent()) |ev| switch (ev) {
@@ -52,7 +52,7 @@ libs/zig-cpp-platform-stack-adapter/
 ├── LICENSE                          # MIT
 ├── README.md
 ├── build.zig                        # per-target backend selection (see below)
-├── build.zig.zon                    # zero Vulkan deps; SDL3 vendored under vendor/SDL/
+├── build.zig.zon                    # zero Vulkan deps; SDL3 via castholm/SDL dep
 ├── src/
 │   ├── root.zig                     # public API — re-exports from `backend` module
 │   ├── common.zig                   # shared types: Event, KeyCode, WindowOptions, ActionId (no native-handle type — those getters return inline anon structs)
@@ -68,12 +68,13 @@ libs/zig-cpp-platform-stack-adapter/
 │   │       ├── macos.zig
 │   │       └── android.zig
 │   └── tests/                       # integration tests against the public API
-└── vendor/
-    └── SDL/                         # SDL3 as git submodule
-                                     # compiled only when backend=sdl3
+└── vendor/                          # empty for the SDL3 backend (SDL3 comes from
+                                     # the castholm/SDL build.zig.zon dependency);
+                                     # only used if a future native backend vendors
+                                     # a C lib such as libxkbcommon
 ```
 
-`vendor/SDL/` is a **vendored dependency** of the adapter, not a sub-library of it. Structurally identical to how the Vulkan-stack adapter vendors VMA. The `backend/native/` slot is retained as scaffolding for a possible future native backend; **it's not on the roadmap** as of 2026-05-26 but the architecture supports it without rewriting the public API.
+SDL3 is **not** vendored — it's a pinned `build.zig.zon` dependency on [`castholm/SDL`](https://github.com/castholm/SDL), which packages SDL's C sources for the Zig build system (decision 2026-05-27; see [`../external-libs-catalog.md` § Building SDL3](../external-libs-catalog.md)). The `vendor/` dir stays empty for the SDL3 backend. The `backend/native/` slot is retained as scaffolding for a possible future native backend; **it's not on the roadmap** as of 2026-05-26 but the architecture supports it without rewriting the public API.
 
 ## Build-time backend selection — per-target tree-shaking
 
@@ -114,26 +115,25 @@ pub fn build(b: *std.Build) void {
     });
     platform_mod.addImport("backend", backend_mod);
 
-    // SDL3 vendored source compiled only when backend=sdl3
+    // SDL3 comes from the castholm/SDL build.zig.zon dependency — link its
+    // per-target `SDL3` artifact rather than compiling SDL sources ourselves.
     if (backend_choice == .sdl3) {
-        backend_mod.addCSourceFiles(.{
-            .files = &sdl3_sources_for_target(target.result.os.tag),
-            // ...
-        });
+        const sdl = b.dependency("sdl", .{ .target = target, .optimize = optimize });
+        backend_mod.linkLibrary(sdl.artifact("SDL3"));
     }
 }
 ```
 
-The compiler walks the import graph from the chosen backend root. Files for other OSes / other backends are **never referenced** → never parsed, type-checked, or codegen'd. SDL3's CMake already excludes per-OS subtrees when building for one target; our Zig wrapper inherits that via `addCSourceFiles` of only the relevant subset.
+The compiler walks the import graph from the chosen backend root. Files for other OSes / other backends are **never referenced** → never parsed, type-checked, or codegen'd. castholm/SDL's `build.zig` compiles the `SDL3` artifact for the requested target only, so per-OS SDL sources never enter the build.
 
 ### Per-target tree-shake guarantee
 
 | Export target | Files compiled into the export | Files NOT touched |
 | --- | --- | --- |
-| `--target x86_64-linux-gnu -Dplatform_backend=sdl3` (default) | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + `vendor/SDL/` (Linux subset only) | SDL3's Windows/macOS/Android sources (SDL3's own CMake gates them); all `backend/native/*` files |
-| `--target x86_64-windows-gnu -Dplatform_backend=sdl3` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + `vendor/SDL/` (Windows subset only) | SDL3's Linux/macOS/Android sources; all `backend/native/*` files |
-| `--target aarch64-linux-android -Dplatform_backend=sdl3` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + `vendor/SDL/` (Android subset only — includes `SDLActivity.java` bridge) | SDL3's desktop sources |
-| `--target x86_64-linux-gnu -Dplatform_backend=native` (future option, not on roadmap) | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (linux branch) + `backend/native/linux.zig` + `linux_x11.zig` + `linux_wayland.zig` | All Win32/macOS/Android backend files; all SDL3 vendor source |
+| `--target x86_64-linux-gnu -Dplatform_backend=sdl3` (default) | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + the castholm/SDL `SDL3` artifact (Linux target only) | SDL3's Windows/macOS/Android sources (SDL3's own CMake gates them); all `backend/native/*` files |
+| `--target x86_64-windows-gnu -Dplatform_backend=sdl3` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + the castholm/SDL `SDL3` artifact (Windows target only) | SDL3's Linux/macOS/Android sources; all `backend/native/*` files |
+| `--target aarch64-linux-android -Dplatform_backend=sdl3` | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (sdl3 branch) + `backend/sdl3.zig` + the castholm/SDL `SDL3` artifact (Android target — includes `SDLActivity.java`) | SDL3's desktop sources |
+| `--target x86_64-linux-gnu -Dplatform_backend=native` (future option, not on roadmap) | `root.zig` + `common.zig` + `action_input.zig` + `native_handle.zig` (linux branch) + `backend/native/linux.zig` + `linux_x11.zig` + `linux_wayland.zig` | All Win32/macOS/Android backend files; the castholm/SDL `SDL3` artifact entirely |
 
 Verification rule: `nm libzvox-runtime.so | grep -i 'win32\|wayland\|cocoa'` shows only the symbols for the target platform.
 
@@ -343,6 +343,8 @@ If a native backend is ever added, divergence between backends would be caught i
 ```zig
 pub const Window = opaque {};
 
+pub const Renderer = enum { none, vulkan, opengl };
+
 pub const WindowOptions = struct {
     title: []const u8,
     size: Size = .{ .w = 1280, .h = 720 },
@@ -350,7 +352,7 @@ pub const WindowOptions = struct {
     fullscreen: bool = false,
     resizable: bool = true,
     borderless: bool = false,
-    vulkan_compatible: bool = true,
+    renderer: Renderer = .vulkan,       // GPU API bound at creation; engine always .vulkan
     parent: ?*Window = null,            // for modal / child windows
 };
 
@@ -367,6 +369,8 @@ pub fn position(window: *Window) Position;            // best-effort
 pub fn scaleFactor(window: *Window) f32;
 pub fn shouldClose(window: *Window) bool;
 ```
+
+> **Renderer choice — the engine uses Vulkan only.** `WindowOptions.renderer` selects the GPU API bound at window creation (SDL sets `SDL_WINDOW_VULKAN` vs `SDL_WINDOW_OPENGL` up front). The **engine always passes `.vulkan`** and never exercises the OpenGL path. `.opengl` (a managed GL context + `glSwapWindow` / `glGetProcAddress`) and `.none` are **library-level capabilities of [`zig-cpp-platform-stack-adapter`](https://github.com/SETA1609/zig-cpp-platform-stack-adapter) for other consumers** — kept so the adapter isn't Vulkan-locked, but outside the engine's usage. GL API details live in that library's `docs/mission.md`.
 
 ### Events
 
@@ -621,7 +625,7 @@ This replaces the earlier "GLFW v0 → native v1.x" migration. The sub-repo toda
 
 | Step | Scope | Verification |
 | --- | --- | --- |
-| 1 | Vendor SDL3 under `vendor/SDL/` as a git submodule pinned to a stable SDL3 release tag | `zig build` of the adapter succeeds with SDL3 compiled |
+| 1 | Add [`castholm/SDL`](https://github.com/castholm/SDL) as a pinned `build.zig.zon` dependency (HIDAPI elected BSD-3-Clause); link its `SDL3` artifact | `zig build` of the adapter succeeds with SDL3 linked |
 | 2 | Replace `backend/glfw.zig` with `backend/sdl3.zig` — window + event pump + Vulkan surface property reads | Hello-world opens an SDL3 window on Linux X11 and Wayland; surface query returns valid props |
 | 3 | Wire native-handle getters via `SDL_GetWindowProperties` | `platform.getX11Handle` / `getWaylandHandle` / `getWin32Handle` / `getAndroidHandle` each return inline-anon-struct of raw primitives or `null` |
 | 4 | Action-mapped input through `SDL_PollEvent` | Synthetic + real inputs route through the same code path; integration tests pass |
