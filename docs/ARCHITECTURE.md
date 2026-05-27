@@ -100,7 +100,7 @@ This makes hot-reload, threading, and serialization tractable: scene data is jus
 8. **ECS Core** — Archetype-based ECS, system scheduler, query cache
 9. **Scene & Instancing** — Persistent world + instanced scenes (dungeons, towers, houses) wired via `orchestrator.toml`
 10. **Gameplay Modules** — Skills, perks, magic (spellmaking), crafting/synthesis, inventory, NPC AI — each a module
-11. **Modding** — Layered loader (Core → Mods → Player Overrides), TOML data mods (JSON sidecars only where needed), native plugin ABI, Steam Workshop client
+11. **Modding** — Layered loader (Core → Mods → Player Overrides), TOML data mods, **two-tier runtime** (native `dlopen` only for content Ed25519-signed by the per-project publisher; WASM sandbox via WAMR default for third-party), Steam Workshop client
 12. **UI** — TOML layout + SCSS styling for in-game UI, ImGui for editor/dev tools
 13. **Project Manager** — Project list, recents, favorites, project creation wizard (editor build only)
 14. **Editor / Tools** — Voxel brush, biome painter, scene browser, entity spawner, skill/perk editor, recipe editor, live hot-reload (editor build only)

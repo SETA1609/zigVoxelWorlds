@@ -47,6 +47,7 @@ Until v1.0, expect breaking changes between **every** minor version. The engine 
 - **World editability:** per-scene TOML policy (`full` / `none` / `voxel_type_allowlist` / `coord_range_allowlist` / `tag_allowlist` / `script`)
 - **MVP scope:** Phase 1 + Phase 2 only (Vulkan window + module system + RenderServer + hello module + rotating cube)
 - **Distribution model:** engine-as-app (Project Manager + editor in one binary, re-exec on project open); export tree-shakes a per-project `libzvox-runtime.{so,dll}` via `zig build-lib -dynamic`
+- **Modding (2026-05-26 cluster):** two-tier runtime (native `dlopen` only for Ed25519-signed first-party/curated content; WASM sandbox via WAMR default for all third-party/Workshop/SDK mods), per-project publisher Ed25519 trust root baked into the exported launcher (`PROJECT_PUBKEY`), hard proprietary IP boundary (`ip_guard` build-time check in `src/editor/export/`), SDK workflow requires the shipped parent game + modkit (public interface only), WASM hot-reload path explicitly rejected for editor (native dylib only for dev/prod parity)
 
 #### Not yet started
 

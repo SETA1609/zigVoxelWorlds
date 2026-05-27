@@ -53,7 +53,7 @@ Code in this list is in the engine binary, used at design time, but **never** sh
 | Project Manager | `src/project_manager/` | Only relevant when authoring projects |
 | Editor panels | `src/editor/panels/` | Voxel brush, recipe editor, etc. — design-time tools |
 | Asset importers | `src/importers/` | Source → baked transforms run at import time |
-| Export pipeline | `src/export/` | Produces the shipped game |
+| Export pipeline | `src/editor/export/` | Produces the shipped game |
 | Embedded Neovim host | `src/editor/code_editor/` | Code editing happens in the editor, not in the game |
 | Module enable/disable UI | `src/editor/panels/modules.zig` | Author-time decision |
 | Hot-reload watcher | `src/editor/hot_reload/` | Recompiles scripts + re-bakes assets during dev |
@@ -61,7 +61,7 @@ Code in this list is in the engine binary, used at design time, but **never** sh
 | Asset DB writer | `src/editor/assetdb_writer.zig` | Writes `<project>/assets/.assetdb.toml` GUIDs |
 | `TOOLS_ENABLED` code paths everywhere | comptime-gated | Stripped by Zig dead-code elimination in non-tools builds |
 
-Enforcement: a `build.zig` import-graph check rejects builds where runtime modules import from `editor/`, `project_manager/`, `importers/`, or `export/`.
+Enforcement: a `build.zig` import-graph check rejects builds where runtime modules import from `editor/`, `project_manager/`, `importers/`, or `editor/export/`.
 
 ---
 
@@ -79,7 +79,7 @@ Code in this list is in both the engine binary (used by editor playtest) **and**
 | Voxel core | `modules/voxel_core/` | Optional — disabled for non-voxel projects (rare, but possible) |
 | Physics | `modules/physics_jolt/` | Optional — disabled for projects that don't need physics |
 | Networking | `modules/multiplayer/` | Optional — disabled for singleplayer-only games |
-| Modding loader | `src/modding/` | Always shipped if mods are enabled in `project.toml` |
+| Modding loader | `modules/modding/` | Always shipped if mods are enabled in `project.toml` |
 | Steam Workshop client | `modules/steam/` | Optional — only with `-Dsteam=true` |
 
 The exact subset is decided at export time by reading `<project>/project.toml`'s `[modules]` table.

@@ -6,11 +6,11 @@
 
 A single C ABI is the load-bearing surface for:
 
-- **Mods** — `.so`/`.dll` plugins loaded at runtime (per [`engine-vs-game.md`](../engine-vs-game.md))
-- **DLC mods** — same shape as mods, just shipped by you (per [`specs/mod-manager.md`](mod-manager.md))
+- **Native-tier mods & DLCs** — `.so`/`.dll` plugins `dlopen`'d at runtime (only for content Ed25519-signed by the project publisher's key; per [`engine-vs-game.md`](../engine-vs-game.md) and [`specs/mod-manager.md`](mod-manager.md) § Security)
 - **Game scripts** — `libgame.so` compiled per-project (per [`engine-vs-game.md`](../engine-vs-game.md) § 5)
+- **WASM-sandboxed mods** — use a curated Host API (strict subset of the above C ABI) via WAMR; never raw `dlopen`
 
-All three load through the same `dlopen` path. All three must work against the same ABI for the lifetime of the engine.
+The stable C ABI (and generated `zvox_abi.h`) is the contract for native-tier content and game scripts. WASM mods are limited to the documented Host API surface. All must be versioned and stable for the lifetime of the engine.
 
 ## Design principles
 
