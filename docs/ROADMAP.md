@@ -148,7 +148,7 @@ Built as `modules/multiplayer/` behind `NetServer`. Also wires the OpenTelemetry
 
 Spec: [`specs/multiplayer.md`](specs/multiplayer.md). Reference: [Luanti multiplayer + Unreal Iris](engine-references.md).
 
-**Validation track (pre-requisite):** ENet net-stack adapter validated against a reference C++ host **before this phase begins**. The reference host already uses ENet directly; swapping in our adapter exercises the C ABI under real multi-client traffic. Strongest signal of any pre-engine validation. See [`external-libs-catalog.md` § 5.5](external-libs-catalog.md).
+**Validation track (pre-requisite):** GameNetworkingSockets net-stack adapter validated via a **standalone harness** added as a new rung in `zig-stack-adapter-examples` (a tiny client + server exercising connect / send / reliable+unreliable lanes / encryption) **before this phase begins**. The Luanti-fork pathway used for Tracy and meshoptimizer doesn't apply here — Luanti uses ENet natively, and the transport decision (2026-05-29, see [`specs/multiplayer.md`](specs/multiplayer.md)) chose GNS. See [`external-libs-catalog.md` § 5.5](external-libs-catalog.md).
 
 **Milestone:** 4 players co-op the dungeon-clear loop with acceptable latency; a dedicated-server instance ships tick-time p50/p95/p99 + player count to a local Grafana dashboard.
 

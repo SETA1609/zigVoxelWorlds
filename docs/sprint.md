@@ -160,12 +160,11 @@ Per the strategy in § 5.5, the Tier A adapters are:
   - Outcome: confidence that the adapter's Zig-build setup + C ABI is sound — the smallest meaningful end-to-end test
   - Estimate: 1–2 days assuming the adapter sub-repo is buildable
 
-- [ ] **G.2** — ENet net-stack adapter swap (strongest signal)
-  - Replace `#include <enet/enet.h>` in the reference host's network layer with the adapter's C ABI calls
-  - Run a real multi-client session against the modified host
-  - Acceptance: same network behavior as upstream — clients connect, packets flow, no regressions
-  - Outcome: validates the net-stack adapter's C ABI under real game traffic before `modules/multiplayer/` depends on it (Phase 10)
-  - Estimate: 3–5 days; the API surface is small (~30 functions)
+- [ ] **G.2** — GameNetworkingSockets net-stack adapter validated via standalone harness
+  - Add a new rung to `zig-stack-adapter-examples` (`net-pingpong` or similar) — a tiny client + server pair that exercises connect, reliable-lane send, unreliable-lane send, encryption-on-by-default, and clean disconnect
+  - Acceptance: harness runs locally; `nm` shows the GNS adapter's C ABI is the only exported network surface (no raw `SteamNetworkingSockets_*` symbols leaking past the adapter)
+  - Outcome: validates the net-stack adapter's C ABI under real connect/send traffic before `modules/multiplayer/` depends on it (Phase 10). The earlier "ENet swap in Luanti" plan doesn't apply — GNS isn't what Luanti uses; see [`specs/multiplayer.md`](specs/multiplayer.md)
+  - Estimate: 3–5 days (adapter build + harness rung + libsodium/protobuf build wiring)
 
 - [ ] **G.3** — meshoptimizer mesh-stack adapter pass (clean augmentation)
   - Add a meshopt post-pass on the reference host's chunk-mesh generator

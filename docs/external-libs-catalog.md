@@ -71,8 +71,8 @@ A thin Zig wrapper module (e.g. `src/wrappers/miniaudio.zig`) is fine if the C A
 | **stb_image** | <https://github.com/nothings/stb> | public domain | PNG/JPG/BMP decode at import | 4 |
 | **MikkTSpace** | <https://github.com/mmikk/MikkTSpace> | zlib | Universal tangent-space basis computation | 4 |
 | **miniaudio** (opt-in audio backend) | <https://github.com/mackron/miniaudio> | MIT-0 / public domain | **Opt-in richer audio backend per [`specs/audio.md`](specs/audio.md).** Default audio is SDL3 (via the platform-stack adapter); miniaudio is added via `project.toml [audio] backend = "miniaudio"` for 3D spatial, doppler, reverb. Daggerfall opts in; arena_modes / rogue_tower / likely Atelier + Stardew use SDL3 audio. | 7.5 |
-| **ENet** | <http://enet.bespin.org/> | MIT | UDP transport (candidate primary) | 10 (Multiplayer) |
-| **miniupnpc** | <http://miniupnp.free.fr/> | BSD-3 | UPnP port-forward for self-hosted dedicated servers | 10 |
+| ~~**ENet**~~ | ~~<http://enet.bespin.org/>~~ | ~~MIT~~ | ~~UDP transport~~ — **not selected**; GameNetworkingSockets chosen instead (decision 2026-05-29, see [`specs/multiplayer.md`](specs/multiplayer.md)) | — |
+| **miniupnpc** | <http://miniupnp.free.fr/> | BSD-3 | UPnP port-forward for self-hosted dedicated servers (standalone builds; Steam build uses SDR instead) | 10 |
 | **zstd** | <https://github.com/facebook/zstd> | BSD-3 (pin permissive) | Chunk + save compression | 6 / 13 |
 | **LZ4** (hot-path alternative) | <https://github.com/lz4/lz4> | BSD-2 | Faster-decompress option — only adopt if zstd profiling shows a hot-path miss | 6 |
 | **xxHash** | <https://github.com/Cyan4973/xxHash> | BSD-2 | Non-crypto integrity hash for save chunks + assetdb | 4 / 13 |
@@ -148,7 +148,7 @@ C++ adapter code follows [`cpp-style.md`](cpp-style.md) — Google C++ Style Gui
 | **WAMR (wasm-micro-runtime)** | <https://github.com/bytecodealliance/wasm-micro-runtime> | Apache-2.0 | Apache-2.0 | **Sandboxed third-party mod runtime — default tier for all Workshop / unsigned / SDK-built community mods.** Tiered with native `dlopen` for content Ed25519-signed by the **project publisher's key** (per-project trust root, baked into the launcher binary at export time — NOT into the engine itself). WASM tier rules: WASI NOT exposed; per-mod resource limits (1 ms/tick CPU budget, 64 MB linear memory, network-deny by default, filesystem scoped to mod data dir); `proc_exit` intercepted; deterministic for multiplayer + replays. See [`specs/mod-manager.md`](specs/mod-manager.md) § Security / sandbox considerations. | 14 |
 | **Tracy** | <https://github.com/wolfpld/tracy> | BSD-3 | MIT | Real-time CPU/GPU profiling | 5 (gated by `-Dtracy=true`) |
 | **libghostty** | <https://github.com/ghostty-org/ghostty> | MIT | MIT | Editor playtest log panel surface | 12 |
-| **GameNetworkingSockets** (v1.x alternative to ENet) | <https://github.com/ValveSoftware/GameNetworkingSockets> | BSD-3 | MIT | UDP transport — adopt for Steam relay in v1.x | post-1.0 |
+| **GameNetworkingSockets** | <https://github.com/ValveSoftware/GameNetworkingSockets> | BSD-3 | MIT | **Primary multiplayer transport** (decision 2026-05-29). Reliable UDP + built-in encryption (libsodium) + connection state machine + lane priorities. Two build modes: standalone (itch/GOG) with ICE NAT-punching, or Steamworks-linked (Steam) which unlocks SDR + lobbies. Pulls libsodium + protobuf headers. See [`specs/multiplayer.md`](specs/multiplayer.md). | 10 (Multiplayer) |
 | **Steamworks SDK** | <https://partner.steamgames.com/> | Proprietary | n/a (separate repo, never open) | Steam Workshop, achievements, DLC gating (conditional, `-Dsteam=true`) | 14 |
 
 ⚠ = wrap with Apache 2.0 because of patent-prone tech in the wrapped library.
@@ -297,13 +297,12 @@ Foundation work that unlocks editor + basic world. Each step builds on prior one
 | 10 | **miniaudio** (§2) | 7.5 | Audio runtime |
 | 11 | **FreeType** (§2) + **HarfBuzz adapter** (§3) + **msdfgen adapter** (§3) | 7.5 | UI text — rasterization + shaping + SDF atlases |
 | 12 | **Recast/Detour adapter** (§3) | 8 | AI navmesh + A* per [`specs/ai.md`](specs/ai.md) |
-| 13 | **ENet** (§2) + **miniupnpc** (§2) | 10 | Multiplayer transport + UPnP for self-hosted |
+| 13 | **GameNetworkingSockets adapter** (§3) + **miniupnpc** (§2) | 10 | Multiplayer transport (GNS standalone for itch/GOG; Steamworks-linked build flag unlocks SDR + lobbies) + UPnP for self-hosted standalone servers |
 | 14 | **libghostty adapter** (§3) | 12 | Editor playtest log surface |
 | 15 | **msdf-atlas-gen adapter** (§3) + **ImGuizmo adapter** (§3) + **imnodes adapter** (§3) + **filewatch** (§2) | 12 | Editor convenience |
 | 16 | **backward-cpp** (§2) + **Crashpad adapter** (§3) | 12 / 13 | Dev stack traces + shipped-build crash reports |
 | 17 | **zstd** (§2) + **xxHash** (§2) + **BLAKE3** (§2) | 13 | Save format compression + integrity + content addressing |
-| 18 | **WAMR adapter** (§3) + **Steamworks adapter** (§3) | 14 | Sandboxed mods + Steam build |
-| 19 | **GameNetworkingSockets adapter** (§3) | post-1.0 | Adopt for Steam relay in v1.x — replaces ENet for shipped Steam builds |
+| 18 | **WAMR adapter** (§3) + **Steamworks adapter** (§3) | 14 | Sandboxed mods + Steam build (Steamworks also unlocks GNS's SDR + lobbies for the Steam transport build) |
 
 ---
 
@@ -311,7 +310,7 @@ Foundation work that unlocks editor + basic world. Each step builds on prior one
 
 **Rationale.** Each `libs/zig-cpp-*-adapter/` sub-repo wraps a C/C++ library behind a stable C ABI. Bugs in the C ABI shape, build wiring, or platform behavior surface late — usually only when engine code starts depending on the adapter. To catch them earlier, an adapter can be **dropped into a known-working C++ host** that already uses the same upstream library, and exercised against real workloads before the engine consumes it.
 
-Pattern source: integrating a freshly-built `libs/<x>-stack-adapter/` into a reference engine ([`engine-references.md`](engine-references.md) catalogs which engines use which upstream libraries — Luanti is the closest match for our use cases, since it ships voxel multiplayer on Linux + Windows + Android using SDL2 + ENet).
+Pattern source: integrating a freshly-built `libs/<x>-stack-adapter/` into a reference engine ([`engine-references.md`](engine-references.md) catalogs which engines use which upstream libraries — Luanti is the closest match for several voxel-engine subsystems, since it ships voxel mod + scripting + persistence on Linux + Windows + Android. Note: Luanti's transport is ENet, which zVoxRealms no longer adopts — the net-adapter is validated via a standalone harness instead, not in Luanti).
 
 **This is a workflow, not a build step.** Reference-engine integration work happens in a separate repo from `zigVoxelWorlds/` (the reference engine, possibly a personal fork). Code never flows from the reference engine back into zVoxRealms; only **insight**. The reverse direction — zVoxRealms adapter installed in the reference engine — is the validation path. See [`engine-references.md` § Legal](engine-references.md) for license discipline; Luanti's LGPL specifically forbids reverse code flow.
 
@@ -320,8 +319,9 @@ Pattern source: integrating a freshly-built `libs/<x>-stack-adapter/` into a ref
 | Adapter | Why it validates well | Why it matters for zVoxRealms |
 | --- | --- | --- |
 | **Tracy** | Augmentation only — wrap `TracyZoneScoped` around hot loops in the reference engine's server tick + meshgen + map save. Doesn't replace anything. | Validates Zig-as-C++-build-system wiring on a real C++ host. Quick payoff: ~50 LoC integration in the reference. |
-| **Net (ENet)** | Many voxel reference engines (Luanti, Veloren, custom engines) already use ENet directly. Replace `#include <enet/enet.h>` with the adapter's C ABI calls. Real multi-client traffic exercises the wrapper. | **Strongest signal** for `modules/multiplayer/`. ENet API surface is small (~30 functions); good shape match. |
 | **meshoptimizer** | Add as a post-pass on the reference engine's chunk-mesh generator. Doesn't replace anything — augmentation. | Pre-validates the mesh-opt wrapper for `modules/voxel_core/` greedy-mesh output. |
+
+Note: an **ENet net-stack adapter** would have validated cleanly against Luanti (which uses ENet natively), but the transport decision (2026-05-29) chose GameNetworkingSockets instead — so the GNS net-stack adapter is validated via a **standalone harness** added as a rung in the `zig-stack-adapter-examples` ladder, not against Luanti. The standalone harness exercises the adapter's C ABI under real connect + send + reliable/unreliable + lane + encryption flows; see [`specs/multiplayer.md`](specs/multiplayer.md).
 
 ### Tier B — useful but moderate effort
 
@@ -346,16 +346,16 @@ These adapters don't map cleanly onto a typical voxel reference engine's existin
 
 1. **One-way code flow**: zVox adapter → reference engine, never the reverse. Per [`engine-references.md` § Legal](engine-references.md): Luanti is LGPL — copying Luanti code into Apache-2.0 zVoxRealms is engine-killing.
 2. **Separate sessions**: don't open zVoxRealms + the reference repo in the same editor/LLM context. Cross-pollination is the realistic contamination vector for a solo dev.
-3. **Time-box each validation**: pick one concrete deliverable per adapter (e.g. "Tracy integrated around server tick + meshgen", "ENet swap behind the adapter's C ABI"). Don't open-end "modernize the reference."
+3. **Time-box each validation**: pick one concrete deliverable per adapter (e.g. "Tracy integrated around server tick + meshgen", "meshoptimizer post-pass on chunk mesher"). Don't open-end "modernize the reference."
 4. **Engine code never depends on the reference engine.** Validation lives separately. The output of a validation pass is: confidence + an adapter README note ("validated against \<host\> at \<version\>") + bug-fix commits in the adapter sub-repo if the validation surfaced issues.
 
 ### Recommended sequence
 
 For zVoxRealms's Phase 1+ work:
 
-1. **Tracy first** (smallest, fast feedback on Zig-build wiring)
-2. **ENet second** (highest-signal — multiplayer is Phase 10 critical path)
-3. **meshoptimizer third** (Phase 4 / 6 mesh optimization landing)
+1. **Tracy first** (smallest, fast feedback on Zig-build wiring) — validated in Luanti
+2. **meshoptimizer second** (Phase 4 / 6 mesh optimization landing) — validated in Luanti
+3. **GameNetworkingSockets third** (Phase 10 critical path) — validated in a **standalone harness** in `zig-stack-adapter-examples` (Luanti uses ENet, not GNS, so the Luanti pathway doesn't apply)
 
 Tier B adapters (Crashpad, ImGui-stack) validate when their phases approach. Tier C adapters skip the reference-host validation entirely and validate directly in zVoxRealms when engine code lands.
 

@@ -66,7 +66,7 @@ The C++ libraries zVoxRealms wraps (Jolt, VMA, ImGui, glslang, KTX, FlatBuffers,
 | `zig-ktx-adapter` | KTX-Software / Basis Universal | Apache-2.0 | BCn / ASTC codec patents — defensive patent grant matters |
 | `zig-steamworks-adapter` | Steamworks SDK | (sub-repo stays private / proprietary) | Steamworks SDK itself is proprietary; the adapter can't be open source anyway |
 
-For everything else (Jolt, VMA, ImGui, glslang, GLFW, FlatBuffers, Tracy, libghostty, GameNetworkingSockets, ENet, miniaudio, cgltf, zstd wrappers): **MIT**.
+For everything else (Jolt, VMA, ImGui, glslang, SDL3, FlatBuffers, Tracy, libghostty, GameNetworkingSockets, miniaudio, cgltf, zstd wrappers): **MIT**.
 
 **Hard rule — don't fragment licenses within a single repo.** When an adapter exists as a standalone repo, license it however you want (MIT or Apache 2.0 per the table above). When code lives inside the zVoxRealms repo, it's Apache 2.0 — period. Don't mix licenses across subdirectories of one repository; it confuses contributors, breaks SBOM tools, and creates maintenance traps.
 

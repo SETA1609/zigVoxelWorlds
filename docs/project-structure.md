@@ -56,7 +56,7 @@ The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHI
 │   │   ├── vulkan/
 │   │   ├── jolt/
 │   │   ├── miniaudio/
-│   │   └── enet/                # OR gns/
+│   │   └── gns/                 # GameNetworkingSockets (decision 2026-05-29)
 │   ├── scene/                   # Init level 2: scene tree, ECS, handle-only world model
 │   │   ├── world.zig
 │   │   ├── chunk.zig
@@ -128,7 +128,7 @@ The layout reflects three architectural decisions from [`ARCHITECTURE.md`](ARCHI
 │   ├── zig-cpp-vulkan-stack-adapter/     # Volk + VMA + glslang (existing submodule)
 │   ├── zig-cpp-physics-stack-adapter/    # Jolt (future)
 │   ├── zig-cpp-audio-stack-adapter/      # miniaudio (future)
-│   ├── zig-cpp-net-stack-adapter/        # ENet or GNS (future)
+│   ├── zig-cpp-net-stack-adapter/        # GameNetworkingSockets + libsodium + protobuf (future)
 │   ├── zig-cpp-asset-stack-adapter/      # cgltf + KTX2 + zstd (future)
 │   ├── zig-cpp-data-stack-adapter/       # toml++ + flatbuffers/capnproto (future)
 │   ├── zig-cpp-ui-stack-adapter/         # ImGui (future)

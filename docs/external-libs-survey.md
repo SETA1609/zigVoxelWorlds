@@ -65,14 +65,14 @@ Cross-reference: [`gaps.md` § Remaining`](gaps.md) for which gap each bucket ma
 
 | Lib | License | Purpose | Used by | Recommendation |
 | --- | --- | --- | --- | --- |
-| **ENet** | ✅ MIT | Reliable UDP — small, proven, well-understood | Godot · Luanti | **Adopt** for v1.0 |
-| **GameNetworkingSockets** | ✅ BSD-3 | Valve stack; Steam relay; built-in encryption | Unreal (via Steam plugin) | **Defer to v1.x** — its key value is Steam relay, only matters once shipping |
+| **GameNetworkingSockets** | ✅ BSD-3 | Reliable UDP + built-in encryption (libsodium) + lane priorities + connection state machine; Steam Datagram Relay when Steamworks linked | Valve titles · Unreal (via Steam plugin) | **Adopt for v1.0** (decision 2026-05-29). Standalone build for itch/GOG; Steamworks-linked build unlocks SDR + lobbies on Steam. |
+| ~~**ENet**~~ | ~~MIT~~ | ~~Reliable UDP — small, proven~~ | ~~Godot · Luanti~~ | **Not selected.** Smaller + simpler than GNS, but requires building encryption + NAT-punching + Steamworks-on-top ourselves — ~1-2 weeks more total engine work for a Steam-first solo shipper. See [`specs/multiplayer.md`](specs/multiplayer.md) for the decision argument. |
 | **libdatachannel** | ⚠ MPL-2.0 | WebRTC for browser + NAT | — | Skip unless WebGPU port forces it |
-| **libjuice** | ✅ ISC | ICE/STUN/TURN client only | — | Hold — only if we need P2P traversal without Steam |
-| **miniupnpc** | ✅ BSD-3 | UPnP port-forward for self-hosted dedicated servers | Godot | **Adopt** — pairs naturally with ENet |
+| **libjuice** | ✅ ISC | ICE/STUN/TURN client only | — | Skip — GNS standalone already includes ICE-style NAT punching via libsodium-based crypto + its own signaling |
+| **miniupnpc** | ✅ BSD-3 | UPnP port-forward for self-hosted dedicated servers (standalone builds only — Steam build uses SDR) | Godot | **Adopt** — useful for the standalone-build self-hosting story |
 | ~~libnice~~ | ❌ LGPL | NAT traversal | — | **Forbidden** |
 
-**Verdict:** ENet + miniupnpc.
+**Verdict:** GameNetworkingSockets + miniupnpc.
 
 ### C. AI runtime (`specs/ai.md` — Phase 8)
 

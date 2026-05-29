@@ -398,7 +398,7 @@ You've referenced `project.toml`, `mod.toml`, `scene.toml`, `orchestrator.toml`,
 
 ### §3.5 — Multiplayer
 
-25. **⏰ before Phase 10** **Network transport choice** — ENet vs GameNetworkingSockets vs custom UDP
+25. ~~**⏰ before Phase 10** **Network transport choice** — ENet vs GameNetworkingSockets vs custom UDP~~ → ✅ **decided 2026-05-29**: GameNetworkingSockets (standalone for itch/GOG; Steamworks-linked for Steam). See [`specs/multiplayer.md`](specs/multiplayer.md)
 26. **⏰ before Phase 10** **Edit authority model** — host-decides vs client-prediction-with-rollback
 27. **⏰ before Phase 10** **Server discovery** — LAN broadcast vs lobby service vs Steam Networking
 28. **⏰ before Phase 10** **NAT traversal** — direct-only vs hole-punching service

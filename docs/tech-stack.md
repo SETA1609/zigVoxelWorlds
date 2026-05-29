@@ -119,7 +119,7 @@ Source files are author-friendly. Runtime files are engine-friendly. The pipelin
 ## Networking
 
 - **Authoritative client-server**, written in Zig.
-- UDP-based transport (custom or via a vetted C library such as ENet / GameNetworkingSockets — decision deferred to Phase 10; see [`external-libs-catalog.md`](external-libs-catalog.md)).
+- UDP-based transport: **GameNetworkingSockets** via `libs/zig-cpp-net-stack-adapter/` (decision 2026-05-29 — supersedes the earlier ENet-vs-GNS open question). Standalone build for itch/GOG; Steamworks-linked build unlocks SDR + lobbies on Steam. See [`specs/multiplayer.md`](specs/multiplayer.md) and [`external-libs-catalog.md`](external-libs-catalog.md).
 - Client prediction + server reconciliation, interest management, LAN discovery.
 
 ## Modding

@@ -322,7 +322,7 @@ The two meta-package adapters are fully standalone — no cross-import, no share
 | **ImGuizmo** + **imnodes** | Editor 3D gizmos + node-graph UI | C++ ImGui companions |
 | **Crashpad** | Out-of-process crash reporter for shipped builds | C++ |
 | **WAMR** | Sandboxed WASM runtime for third-party mods | Complex C with non-trivial lifecycle |
-| **GameNetworkingSockets** (post-v1.0) | Reliable UDP transport + Steam relay | C++; deferred to v1.x for Steam relay |
+| **GameNetworkingSockets** | Reliable UDP transport + built-in encryption + lane priorities + optional Steam Datagram Relay | C++; primary multiplayer transport from Phase 10 (decision 2026-05-29). Pulls libsodium + protobuf headers. |
 | **Steamworks SDK** | Steam Workshop, achievements, DLC gating (conditional) | C++, vendor SDK |
 | **Tracy** | High-precision CPU/GPU profiling | C++ — has its own client library |
 
@@ -339,7 +339,6 @@ Either pure-Zig dependencies or single-header / small C libraries that are trivi
 | **TOML parser** (`zig-toml` or similar) | Hand-authored data (skills, recipes, scenes, manifests) | Zig-native package available |
 | **cgltf** | glTF 2.0 model loading | Single-header C — `@cImport` directly |
 | **miniaudio** | Audio playback / mixing / streaming | Single-header C |
-| **ENet** | Reliable UDP (one of two candidates) | Plain C, small API; use via `@cImport` |
 | **zstd** / **LZ4** | Chunk + save compression | Plain C libs |
 | **Math** (vectors / matrices / quats) | Engine math | Pure Zig, hand-written or `zig-gamedev/math` |
 | **Hash maps, ArrayList, etc.** | Containers | `std` |

@@ -176,7 +176,7 @@ These need judgment — ask if unclear:
 > Owner: "I'm getting a segfault when I call `jolt_create_world`. Here's the code."
 > Claude: reads the code, finds the issue (e.g. uninitialized field), explains why it segfaults, points to the line, suggests the fix in chat, lets owner type it.
 
-> Owner: "Update LICENSES.md to add ENet now that I'm pulling it in."
+> Owner: "Update LICENSES.md to add libsodium now that I'm pulling it in."
 > Claude: edits LICENSES.md directly. Pure bookkeeping, not learning content.
 
 > Owner: "Write tests for the chunk allocator I just finished."

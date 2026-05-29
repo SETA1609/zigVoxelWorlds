@@ -4,7 +4,21 @@
 
 ## Scope
 
-Built as `modules/multiplayer/` behind `NetServer`. The transport library is one of ENet (C, direct cImport) or GameNetworkingSockets (C++, adapter sub-repo) — decided in Phase 10.
+Built as `modules/multiplayer/` behind `NetServer`. Transport is **GameNetworkingSockets (GNS)** via `libs/zig-cpp-net-stack-adapter/` (C++ adapter sub-repo). Decision recorded 2026-05-29 — supersedes the earlier ENet-vs-GNS open question.
+
+**Two build modes, one protocol:**
+
+- **Steam build** (`-Dsteam=true` links Steamworks SDK): unlocks Steam Datagram Relay (SDR) for NAT-less connectivity, Steam auth tickets, Steam lobbies + friend invites. Players on Steam never deal with NAT.
+- **Standalone build** (default — for itch.io, GOG, direct downloads): GNS standalone with libsodium-backed encryption + ICE-style NAT punching (covers ~70-80% of consumer NATs). Symmetric-NAT fallback is "LAN-only or supply a TURN relay."
+
+Same wire protocol on both builds; the build flag selects which transport features are active. See [`external-libs-catalog.md` § 3](../external-libs-catalog.md) for the adapter and [`engine-vs-game.md`](../engine-vs-game.md) for the C++ wrapping rationale.
+
+**Why GNS over ENet** (recorded for future-me; full argument in `project_multiplayer_transport_gns` memory):
+
+- Encryption, connection state machine, lane priorities, and NAT-punching come for free → ~1-2 weeks less engine work than building those on top of ENet.
+- Steam Datagram Relay materializes the "co-op without ceremony" promise (`vision.md:50`) for Steam users; ENet would require us to operate a STUN/TURN service.
+- Same library serves Steam + itch + GOG via the build flag; ENet would require parallel Steamworks-on-top integration.
+- Cost: bigger dep (~150 KB libsodium + protobuf headers), C++ adapter (vs ENet's direct `@cImport`), and the Luanti-fork validation pathway no longer applies (Luanti uses ENet natively).
 
 ## Components
 
@@ -30,10 +44,10 @@ Phase 10 also wires the OpenTelemetry backend behind `src/core/log_sink.zig` and
 
 ## Open decisions
 
-- Transport choice (ENet vs GameNetworkingSockets)
 - Edit authority model (host-decides vs client-prediction-with-rollback)
-- Server discovery (LAN broadcast vs lobby service)
-- NAT traversal (direct-connect-only vs hole-punching)
+- Server discovery for standalone builds (LAN broadcast vs minimal lobby service we host)
+- TURN relay for symmetric-NAT fallback on standalone builds (skip and require port-forwarding vs self-host vs paid service)
+- Whether to expose Steam lobbies to non-Steam builds via the same `NetServer` API surface (transparent vs build-mode-aware)
 
 ## Milestone (from ROADMAP)
 
